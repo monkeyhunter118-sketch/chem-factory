@@ -1,0 +1,167 @@
+* {
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: #121316;
+    color: #e1e2e6;
+    overflow: hidden;
+}
+
+#game-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+#grid-container {
+    flex-grow: 1;
+    position: relative;
+    background-color: #1a1c23;
+    background-image: radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 50px 50px;
+    overflow: hidden;
+}
+
+/* Grid Cells */
+.grid-cell {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    font-weight: bold;
+    transition: background-color 0.15s;
+}
+
+.grid-cell:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Entity Visual Classes */
+.conveyor, .conveyor-curve { 
+    background-color: rgba(255, 255, 255, 0.05); 
+    color: #fbc531;
+    font-size: 22px;
+    background-size: 20px 20px !important;
+}
+
+/* Striped moving backgrounds for conveyors */
+.conveyor.dir-0, .conveyor-curve.dir-0 { /* UP */
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
+    animation: belt-up 0.5s linear infinite;
+}
+.conveyor.dir-1, .conveyor-curve.dir-1 { /* RIGHT */
+    background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
+    animation: belt-right 0.5s linear infinite;
+}
+.conveyor.dir-2, .conveyor-curve.dir-2 { /* DOWN */
+    background-image: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
+    animation: belt-down 0.5s linear infinite;
+}
+.conveyor.dir-3, .conveyor-curve.dir-3 { /* LEFT */
+    background-image: repeating-linear-gradient(270deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
+    animation: belt-left 0.5s linear infinite;
+}
+
+@keyframes belt-up { from { background-position: 0 0; } to { background-position: 0 -20px; } }
+@keyframes belt-right { from { background-position: 0 0; } to { background-position: 20px 0; } }
+@keyframes belt-down { from { background-position: 0 0; } to { background-position: 0 20px; } }
+@keyframes belt-left { from { background-position: 0 0; } to { background-position: -20px 0; } }
+
+.source-h { background-color: rgba(72, 219, 251, 0.2); border: 2px solid #48dbfb; color: #48dbfb; }
+.source-o { background-color: rgba(255, 107, 107, 0.2); border: 2px solid #ff6b6b; color: #ff6b6b; }
+.source-c { background-color: rgba(200, 200, 200, 0.2); border: 2px solid #aaaaaa; color: #ffffff; }
+.source-n { background-color: rgba(165, 94, 234, 0.2); border: 2px solid #a55eea; color: #a55eea; }
+.source-s { background-color: rgba(254, 202, 87, 0.2); border: 2px solid #fecb57; color: #fecb57; }
+.source-cl { background-color: rgba(29, 209, 161, 0.2); border: 2px solid #1dd1a1; color: #1dd1a1; }
+
+.mixer { 
+    background-color: rgba(32, 191, 107, 0.25); 
+    border: 2px solid #20bf6b; 
+    border-radius: 8px; 
+    color: #20bf6b;
+}
+.inleverpunt { 
+    background-color: rgba(247, 183, 49, 0.25); 
+    border: 2px dashed #f7b731; 
+    border-radius: 8px; 
+    color: #f7b731;
+}
+
+/* Moving Items */
+.item {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 800;
+    color: #121316;
+    z-index: 10;
+    transition: all 0.35s linear;
+    pointer-events: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* UI Sidebar */
+#ui-panel {
+    width: 340px;
+    background-color: #181a1f;
+    border-left: 2px solid #282c34;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 15px rgba(0,0,0,0.5);
+    z-index: 100;
+}
+
+.btn-build {
+    background-color: #22262e;
+    color: #d1d5db;
+    border: 1px solid #333842;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+}
+.btn-build:hover:not(:disabled) { 
+    background-color: #2c323d; 
+    border-color: #4f5b66;
+}
+.btn-build.selected { 
+    background-color: #2563eb; 
+    border-color: #3b82f6; 
+    color: white; 
+    font-weight: bold;
+}
+.btn-build:disabled { 
+    opacity: 0.4; 
+    cursor: not-allowed; 
+}
+
+/* Custom Scrollbar for Sidebar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #181a1f;
+}
+::-webkit-scrollbar-thumb {
+    background: #333842;
+    border-radius: 3px;
+}
