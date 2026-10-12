@@ -30,7 +30,7 @@ const RECIPES = [
     { id: 'C6H12O6', name: 'Glucose', formula: 'C₆H₁₂O₆', req: { 'C': 6, 'H': 12, 'O': 6 }, value: 8500, lvl: 4, color: '#f8c291' }
 ];
 
-// Raw Element Values (if sold unprocessed)
+// Raw Element Values
 const ELEMENT_VALUES = {
     'H': 2, 'O': 3, 'C': 5, 'N': 8, 'S': 12, 'Cl': 15
 };
@@ -60,8 +60,8 @@ const BUILDINGS = [
 ];
 
 // Grid & Entities Store
-const grid = {}; // "x,y" => { type, dir, obj, inventory: {} }
-let items = []; // Array of item objects
+const grid = {}; 
+let items = []; 
 let itemIdCounter = 0;
 
 const DIRS = [ {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: 0, dy: 1}, {dx: -1, dy: 0} ];
@@ -78,7 +78,10 @@ function initGrid() {
             cell.className = 'grid-cell';
             cell.style.left = `${x * CELL_SIZE}px`;
             cell.style.top = `${y * CELL_SIZE}px`;
-            cell.onclick = () => handleGridClick(x, y);
+            cell.onclick = (e) => {
+                e.stopPropagation();
+                handleGridClick(x, y);
+            };
             gridContainer.appendChild(cell);
         }
     }
@@ -149,35 +152,49 @@ function selectTool(toolId, price) {
     }
     selectedTool = toolId;
     toolPrice = price;
+
+    // Pas cursor aan als 'delete' actief is
+    gridContainer.style.cursor = selectedTool === 'delete' ? 'not-allowed' : 'default';
+
     updateUI();
 }
 
 function handleGridClick(x, y) {
     const key = `${x},${y}`;
 
+    // --- DELETE STAND ---
     if (selectedTool === 'delete') {
         if (grid[key]) {
             const buildingDef = BUILDINGS.find(b => b.id === grid[key].type);
+            let refund = 0;
             if (buildingDef && buildingDef.price > 0) {
-                money += Math.floor(buildingDef.price * 0.8);
-                updateUI();
+                refund = Math.floor(buildingDef.price * 0.8);
+                money += refund;
             }
 
+            // Verwijder het element uit het scherm
             if (grid[key].obj && grid[key].obj.parentNode) {
                 grid[key].obj.parentNode.removeChild(grid[key].obj);
             }
             delete grid[key];
 
+            // Verwijder eventuele artikelen/atomen op dit vakje
             const itemsToDelete = items.filter(i => i.x === x && i.y === y);
             itemsToDelete.forEach(item => {
-                if (item.visual.parentNode) item.visual.parentNode.removeChild(item.visual);
+                if (item.visual && item.visual.parentNode) {
+                    item.visual.parentNode.removeChild(item.visual);
+                }
                 const idx = items.indexOf(item);
                 if (idx > -1) items.splice(idx, 1);
             });
+
+            updateUI();
+            showFloatingText(key, refund > 0 ? `+€${refund} 🗑️` : "🗑️ Verwijderd", "#ff4d4d");
         }
         return;
     }
 
+    // --- LOPENDE BAND ROTEREN ---
     if (grid[key] && (grid[key].type === 'conveyor' || grid[key].type === 'conveyor-curve')) {
         if (selectedTool === 'cursor' || selectedTool === grid[key].type) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
@@ -190,6 +207,7 @@ function handleGridClick(x, y) {
 
     if (selectedTool === 'cursor') return;
 
+    // --- GEBOUW VERVANGEN / PLAATSEN ---
     if (grid[key]) {
         if (grid[key].type === selectedTool) return;
 
@@ -210,7 +228,7 @@ function handleGridClick(x, y) {
 
         const itemsToDelete = items.filter(i => i.x === x && i.y === y);
         itemsToDelete.forEach(item => {
-            if (item.visual.parentNode) item.visual.parentNode.removeChild(item.visual);
+            if (item.visual && item.visual.parentNode) item.visual.parentNode.removeChild(item.visual);
             const idx = items.indexOf(item);
             if (idx > -1) items.splice(idx, 1);
         });
@@ -234,8 +252,11 @@ function buildEntity(x, y, type) {
     el.style.left = `${x * CELL_SIZE}px`;
     el.style.top = `${y * CELL_SIZE}px`;
     
-    // Voeg de onclick listener toe zodat geklikt kan worden op geplaatste gebouwen/bronnen
-    el.onclick = () => handleGridClick(x, y);
+    // Zorg ervoor dat klikken op dit gebouw direct handleGridClick aanroept
+    el.onclick = (e) => {
+        e.stopPropagation();
+        handleGridClick(x, y);
+    };
 
     let dir = currentBuildDir;
 
@@ -423,7 +444,7 @@ function gameTick() {
     }
 
     itemsToRemove.forEach(item => {
-        if (item.visual.parentNode) item.visual.parentNode.removeChild(item.visual);
+        if (item.visual && item.visual.parentNode) item.visual.parentNode.removeChild(item.visual);
         const idx = items.indexOf(item);
         if (idx > -1) items.splice(idx, 1);
     });
@@ -442,7 +463,7 @@ function upgradeLevel() {
         }
         for (const key in grid) delete grid[key];
 
-        items.forEach(i => { if (i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
+        items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
         items = [];
         
         updateUI();
