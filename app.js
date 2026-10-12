@@ -85,7 +85,6 @@ function initGrid() {
 }
 
 function updateUI() {
-    // Money & Level Badges
     document.getElementById('money-display').innerText = `€ ${money.toLocaleString('nl-NL')}`;
     document.getElementById('level-badge').innerText = `Lvl ${playerLevel}`;
     document.getElementById('level-title').innerText = LEVEL_CONFIG[playerLevel].title;
@@ -100,7 +99,6 @@ function updateUI() {
         upgradeBtn.style.display = 'none';
     }
 
-    // Render Available Buildings
     const btnContainer = document.getElementById('build-buttons');
     btnContainer.innerHTML = '';
     
@@ -123,7 +121,6 @@ function updateUI() {
         btnContainer.appendChild(btn);
     });
 
-    // Render Recipe Book
     const recipeContainer = document.getElementById('recipe-list');
     recipeContainer.innerHTML = '';
 
@@ -166,8 +163,8 @@ function handleGridClick(x, y) {
                 updateUI();
             }
 
-            if (grid[key].obj.parentNode) {
-                gridContainer.removeChild(grid[key].obj);
+            if (grid[key].obj && grid[key].obj.parentNode) {
+                grid[key].obj.parentNode.removeChild(grid[key].obj);
             }
             delete grid[key];
 
@@ -206,8 +203,8 @@ function handleGridClick(x, y) {
             money += Math.floor(buildingDef.price * 0.8);
         }
 
-        if (grid[key].obj.parentNode) {
-            gridContainer.removeChild(grid[key].obj);
+        if (grid[key].obj && grid[key].obj.parentNode) {
+            grid[key].obj.parentNode.removeChild(grid[key].obj);
         }
         delete grid[key];
 
@@ -236,6 +233,9 @@ function buildEntity(x, y, type) {
     el.className = `grid-cell ${type}`;
     el.style.left = `${x * CELL_SIZE}px`;
     el.style.top = `${y * CELL_SIZE}px`;
+    
+    // Voeg de onclick listener toe zodat geklikt kan worden op geplaatste gebouwen/bronnen
+    el.onclick = () => handleGridClick(x, y);
 
     let dir = currentBuildDir;
 
@@ -292,7 +292,6 @@ function updateVisualPosition(element, x, y) {
 }
 
 function gameTick() {
-    // 1. Spawners produce elements
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type.startsWith('source-')) {
@@ -308,7 +307,6 @@ function gameTick() {
 
     items.forEach(i => i.movedThisTick = false);
 
-    // 2. Transport & Push logic
     const itemsToRemove = [];
 
     items.forEach(item => {
@@ -365,7 +363,6 @@ function gameTick() {
         }
     });
 
-    // 3. Process Chemical Mixers
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type === 'mixer') {
@@ -441,7 +438,7 @@ function upgradeLevel() {
         playerLevel++;
         
         for (const key in grid) {
-            if (grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
+            if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
         }
         for (const key in grid) delete grid[key];
 
@@ -458,7 +455,6 @@ function upgradeLevel() {
     }
 }
 
-// --- Floating Text Effects ---
 function showFloatingText(key, text, color) {
     const [x, y] = key.split(',').map(Number);
     const el = document.createElement('div');
@@ -487,7 +483,6 @@ function showFloatingText(key, text, color) {
     }, 1050);
 }
 
-// --- Event Listeners & Controls ---
 document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'r') {
         selectTool('rotate', 0);
@@ -496,7 +491,6 @@ document.addEventListener('keydown', (e) => {
 
 gridContainer.addEventListener('contextmenu', (e) => e.preventDefault());
 
-// --- Start Game ---
 initGrid();
 updateUI();
 setInterval(gameTick, TICK_RATE);
