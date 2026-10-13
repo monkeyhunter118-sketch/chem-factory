@@ -153,7 +153,6 @@ function selectTool(toolId, price) {
     selectedTool = toolId;
     toolPrice = price;
 
-    // Pas cursor aan als 'delete' actief is
     gridContainer.style.cursor = selectedTool === 'delete' ? 'not-allowed' : 'default';
 
     updateUI();
@@ -162,7 +161,6 @@ function selectTool(toolId, price) {
 function handleGridClick(x, y) {
     const key = `${x},${y}`;
 
-    // --- DELETE STAND ---
     if (selectedTool === 'delete') {
         if (grid[key]) {
             const buildingDef = BUILDINGS.find(b => b.id === grid[key].type);
@@ -172,13 +170,11 @@ function handleGridClick(x, y) {
                 money += refund;
             }
 
-            // Verwijder het element uit het scherm
             if (grid[key].obj && grid[key].obj.parentNode) {
                 grid[key].obj.parentNode.removeChild(grid[key].obj);
             }
             delete grid[key];
 
-            // Verwijder eventuele artikelen/atomen op dit vakje
             const itemsToDelete = items.filter(i => i.x === x && i.y === y);
             itemsToDelete.forEach(item => {
                 if (item.visual && item.visual.parentNode) {
@@ -194,7 +190,6 @@ function handleGridClick(x, y) {
         return;
     }
 
-    // --- LOPENDE BAND ROTEREN ---
     if (grid[key] && (grid[key].type === 'conveyor' || grid[key].type === 'conveyor-curve')) {
         if (selectedTool === 'cursor' || selectedTool === grid[key].type) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
@@ -207,7 +202,6 @@ function handleGridClick(x, y) {
 
     if (selectedTool === 'cursor') return;
 
-    // --- GEBOUW VERVANGEN / PLAATSEN ---
     if (grid[key]) {
         if (grid[key].type === selectedTool) return;
 
@@ -252,7 +246,6 @@ function buildEntity(x, y, type) {
     el.style.left = `${x * CELL_SIZE}px`;
     el.style.top = `${y * CELL_SIZE}px`;
     
-    // Zorg ervoor dat klikken op dit gebouw direct handleGridClick aanroept
     el.onclick = (e) => {
         e.stopPropagation();
         handleGridClick(x, y);
@@ -455,8 +448,8 @@ function upgradeLevel() {
     if (!cost) return;
 
     if (money >= cost) {
-        money -= cost;
         playerLevel++;
+        money = 1000; // Startkapitaal ingesteld op € 1.000 bij level up
         
         for (const key in grid) {
             if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
