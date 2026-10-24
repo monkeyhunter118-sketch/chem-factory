@@ -1,7 +1,7 @@
 const CELL_SIZE = 50;
 let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE);
 let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE);
-const TICK_RATE = 400; // ms per tick
+const TICK_RATE = 1600; // ms per tick (Tick rate gehalveerd naar 1600ms)
 
 // Game State
 let money = 1000;
@@ -30,29 +30,29 @@ const RECIPES = [
     { id: 'C6H12O6', name: 'Glucose', formula: 'C₆H₁₂O₆', req: { 'C': 6, 'H': 12, 'O': 6 }, value: 8500, lvl: 4, color: '#f8c291' }
 ];
 
-// Raw Element Values
+// Raw Element Values (Geordend op atoomnummer: H=1, C=6, N=7, O=8, S=16, Cl=17)
 const ELEMENT_VALUES = {
-    'H': 2, 'O': 3, 'C': 5, 'N': 8, 'S': 12, 'Cl': 15
+    'H': 2, 'C': 5, 'N': 8, 'O': 3, 'S': 12, 'Cl': 15
 };
 
 const ELEMENT_COLORS = {
-    'H': '#48dbfb', 'O': '#ff6b6b', 'C': '#ffffff', 'N': '#a55eea', 'S': '#fecb57', 'Cl': '#1dd1a1'
+    'H': '#48dbfb', 'C': '#ffffff', 'N': '#a55eea', 'O': '#ff6b6b', 'S': '#fecb57', 'Cl': '#1dd1a1'
 };
 
-// Available Buildings Definition
+// Available Buildings Definition (Bronnen geordend volgens het Periodiek Systeem)
 const BUILDINGS = [
     { id: 'cursor', name: '🖱️ Muis (Deselecteren)', price: 0, lvl: 1 },
     { id: 'rotate', name: '🔄 Bouwrichting [Sneltoets: R]', price: 0, lvl: 1 },
     { id: 'conveyor', name: 'Lopende Band', price: 10, lvl: 1 },
     { id: 'conveyor-curve', name: 'Bocht Band', price: 15, lvl: 1 },
-    { id: 'source-h', name: '💧 H-Bron (Waterstof)', price: 100, lvl: 1 },
-    { id: 'source-o', name: '🔥 O-Bron (Zuurstof)', price: 150, lvl: 1 },
     { id: 'mixer', name: '🧪 Chemische Mixer', price: 300, lvl: 1 },
     { id: 'inleverpunt', name: '🏢 Inleverpunt (Verkoop)', price: 100, lvl: 1 },
     
+    // Elementbronnen in volgorde van periodiek systeem
+    { id: 'source-h', name: '💧 H-Bron (Waterstof)', price: 100, lvl: 1 },
     { id: 'source-c', name: '🪨 C-Bron (Koolstof)', price: 400, lvl: 2 },
     { id: 'source-n', name: '💨 N-Bron (Stikstof)', price: 500, lvl: 2 },
-    
+    { id: 'source-o', name: '🔥 O-Bron (Zuurstof)', price: 150, lvl: 1 },
     { id: 'source-s', name: '🟡 S-Bron (Zwavel)', price: 800, lvl: 3 },
     { id: 'source-cl', name: '🧪 Cl-Bron (Chloor)', price: 1000, lvl: 3 },
     
@@ -449,7 +449,7 @@ function upgradeLevel() {
 
     if (money >= cost) {
         playerLevel++;
-        money = 1000; // Startkapitaal ingesteld op € 1.000 bij level up
+        money = 1000;
         
         for (const key in grid) {
             if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
