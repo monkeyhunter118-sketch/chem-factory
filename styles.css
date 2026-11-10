@@ -22,7 +22,7 @@ body {
     background-color: #1a1c23;
     background-image: radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
     background-size: 50px 50px;
-    overflow: hidden;
+    overflow: auto; /* Zorgt voor scrollen op het 3x grotere speelveld */
 }
 
 /* Grid Cells */
@@ -47,7 +47,7 @@ body {
 }
 
 /* Entity Visual Classes */
-.conveyor, .conveyor-curve { 
+.conveyor, .conveyor-curve, .conveyor-curve-left { 
     background-color: rgba(255, 255, 255, 0.05); 
     color: #fbc531;
     font-size: 22px;
@@ -55,19 +55,19 @@ body {
 }
 
 /* Striped moving backgrounds for conveyors */
-.conveyor.dir-0, .conveyor-curve.dir-0 { /* UP */
+.conveyor.dir-0, .conveyor-curve.dir-0, .conveyor-curve-left.dir-0 { /* UP */
     background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-up 0.8s linear infinite;
 }
-.conveyor.dir-1, .conveyor-curve.dir-1 { /* RIGHT */
+.conveyor.dir-1, .conveyor-curve.dir-1, .conveyor-curve-left.dir-1 { /* RIGHT */
     background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-right 0.8s linear infinite;
 }
-.conveyor.dir-2, .conveyor-curve.dir-2 { /* DOWN */
+.conveyor.dir-2, .conveyor-curve.dir-2, .conveyor-curve-left.dir-2 { /* DOWN */
     background-image: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-down 0.8s linear infinite;
 }
-.conveyor.dir-3, .conveyor-curve.dir-3 { /* LEFT */
+.conveyor.dir-3, .conveyor-curve.dir-3, .conveyor-curve-left.dir-3 { /* LEFT */
     background-image: repeating-linear-gradient(270deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-left 0.8s linear infinite;
 }
@@ -113,13 +113,13 @@ body {
 /* Moving Items */
 .item {
     position: absolute;
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
     color: #121316;
     z-index: 10;

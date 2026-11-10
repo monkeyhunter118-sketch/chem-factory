@@ -1,7 +1,8 @@
 const CELL_SIZE = 50;
-let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE);
-let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE);
-const TICK_RATE = 1600; // ms per tick (gehalveerd tempo)
+// Speelveld 3x groter gemaakt in breedte en hoogte
+let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE) * 3;
+let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE) * 3;
+const TICK_RATE = 1600; // ms per tick
 
 // Game State
 let money = 1000;
@@ -9,7 +10,7 @@ let playerLevel = 1;
 let selectedTool = 'cursor';
 let toolPrice = 0;
 let currentBuildDir = 1; // 0=Up, 1=Right, 2=Down, 3=Left
-let activeMixerKey = null; // Houdt bij welke mixer geopend is in het modal
+let activeMixerKey = null;
 
 // Level config
 const LEVEL_CONFIG = {
@@ -20,7 +21,7 @@ const LEVEL_CONFIG = {
     5: { title: "Geavanceerde Biochemie & Explosieven (TNT)", costNext: 250000 }
 };
 
-// Chemical Recipes (Uitgebreid met veel meer stoffen)
+// Chemical Recipes
 const RECIPES = [
     // Level 1
     { id: 'H2O', name: 'Water', formula: 'H₂O', req: { 'H': 2, 'O': 1 }, value: 60, lvl: 1, color: '#38ada9' },
@@ -62,14 +63,15 @@ const ELEMENT_COLORS = {
     'H': '#48dbfb', 'C': '#ffffff', 'N': '#a55eea', 'O': '#ff6b6b', 'S': '#fecb57', 'Cl': '#1dd1a1'
 };
 
-// Available Buildings Definition (Geordend volgens het Periodiek Systeem: H, C, N, O, S, Cl)
+// Available Buildings Definition (Inclusief Bocht Links en Bocht Rechts)
 const BUILDINGS = [
     { id: 'cursor', name: '🖱️ Muis (Deselecteren / Instellen)', price: 0, lvl: 1 },
     { id: 'rotate', name: '🔄 Bouwrichting [Sneltoets: R]', price: 0, lvl: 1 },
     { id: 'conveyor', name: 'Lopende Band', price: 10, lvl: 1 },
-    { id: 'conveyor-curve', name: 'Bocht Band', price: 15, lvl: 1 },
+    { id: 'conveyor-curve', name: 'Bocht Rechts ↪️', price: 15, lvl: 1 },
+    { id: 'conveyor-curve-left', name: 'Bocht Links ↩️', price: 15, lvl: 1 },
     { id: 'mixer', name: '🧪 Chemische Mixer', price: 300, lvl: 1 },
-    { id: 'inleverpunt', name: '🏢 Inleverpunt (Verkoop)', price: 100, lvl: 1 },
+    { id: 'inleverpunt', name: '🏢 Inleverpunt (Max 3)', price: 100, lvl: 1 },
     
     // Bronnen in periodiek systeem volgorde
     { id: 'source-h', name: '💧 H-Bron (Waterstof)', price: 100, lvl: 1 },
@@ -79,7 +81,7 @@ const BUILDINGS = [
     { id: 'source-s', name: '🟡 S-Bron (Zwavel)', price: 800, lvl: 3 },
     { id: 'source-cl', name: '🧪 Cl-Bron (Chloor)', price: 1000, lvl: 3 },
     
-    { id: 'delete', name: '🗑️ Delete', price: 0, lvl: 1 }
+    { id: 'delete', name: '🗑️ Delete [Sneltoets: X]', price: 0, lvl: 1 }
 ];
 
 // Grid & Entities Store
@@ -89,12 +91,17 @@ let itemIdCounter = 0;
 
 const DIRS = [ {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: 0, dy: 1}, {dx: -1, dy: 0} ];
 const DIR_ARROWS = ['⬆️', '➡️', '⬇️', '⬅️'];
-const CURVE_ARROWS = ['↱', '↴', '↲', '↰'];
+const CURVE_RIGHT_ARROWS = ['↱', '↴', '↲', '↰'];
+const CURVE_LEFT_ARROWS = ['↰', '↱', '↴', '↲'];
 
 const gridContainer = document.getElementById('grid-container');
 
 function initGrid() {
     gridContainer.innerHTML = '';
+    // Stel de expliciete grotere breedte/hoogte in op de container
+    gridContainer.style.width = `${GRID_WIDTH * CELL_SIZE}px`;
+    gridContainer.style.height = `${GRID_HEIGHT * CELL_SIZE}px`;
+
     for(let x = 0; x < GRID_WIDTH; x++) {
         for(let y = 0; y < GRID_HEIGHT; y++) {
             const cell = document.createElement('div');
@@ -141,7 +148,8 @@ function updateUI() {
         
         let displayName = b.name;
         if (b.id === 'conveyor') displayName = `${DIR_ARROWS[currentBuildDir]} ${b.name}`;
-        if (b.id === 'conveyor-curve') displayName = `${CURVE_ARROWS[currentBuildDir]} ${b.name}`;
+        if (b.id === 'conveyor-curve') displayName = `${CURVE_RIGHT_ARROWS[currentBuildDir]} ${b.name}`;
+        if (b.id === 'conveyor-curve-left') displayName = `${CURVE_LEFT_ARROWS[currentBuildDir]} ${b.name}`;
         if (b.id === 'rotate') displayName = `🔄 Richting (${DIR_ARROWS[currentBuildDir]}) [R]`;
 
         btn.innerHTML = `
@@ -216,24 +224,36 @@ function handleGridClick(x, y) {
         return;
     }
 
-    // ALS SPIELER OP AANWEZIGE MIXER KLIKT MET KEUZEMUIS -> MODAL OPENEN!
+    // MODAL OPENEN OP MIXER
     if (grid[key] && grid[key].type === 'mixer' && selectedTool === 'cursor') {
         openMixerModal(key);
         return;
     }
 
     // LOPENDE BAND ROTEREN
-    if (grid[key] && (grid[key].type === 'conveyor' || grid[key].type === 'conveyor-curve')) {
+    if (grid[key] && (grid[key].type === 'conveyor' || grid[key].type === 'conveyor-curve' || grid[key].type === 'conveyor-curve-left')) {
         if (selectedTool === 'cursor' || selectedTool === grid[key].type) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
             grid[key].dir = (grid[key].dir + 1) % 4;
             grid[key].obj.classList.add(`dir-${grid[key].dir}`);
-            grid[key].obj.innerText = grid[key].type === 'conveyor' ? DIR_ARROWS[grid[key].dir] : CURVE_ARROWS[grid[key].dir];
+            
+            if (grid[key].type === 'conveyor') grid[key].obj.innerText = DIR_ARROWS[grid[key].dir];
+            if (grid[key].type === 'conveyor-curve') grid[key].obj.innerText = CURVE_RIGHT_ARROWS[grid[key].dir];
+            if (grid[key].type === 'conveyor-curve-left') grid[key].obj.innerText = CURVE_LEFT_ARROWS[grid[key].dir];
             return;
         }
     }
 
     if (selectedTool === 'cursor') return;
+
+    // MAX 3 INLEVERPUNTEN REGEL
+    if (selectedTool === 'inleverpunt' && (!grid[key] || grid[key].type !== 'inleverpunt')) {
+        const currentInleverpunten = Object.values(grid).filter(cell => cell.type === 'inleverpunt').length;
+        if (currentInleverpunten >= 3) {
+            showFloatingText(key, "Max 3 Inleverpunten!", "#ff6b6b");
+            return;
+        }
+    }
 
     // GEBOUW PLAATSEN
     if (grid[key]) {
@@ -291,7 +311,10 @@ function buildEntity(x, y, type) {
         el.innerText = DIR_ARROWS[dir];
         el.classList.add(`dir-${dir}`);
     } else if (type === 'conveyor-curve') {
-        el.innerText = CURVE_ARROWS[dir];
+        el.innerText = CURVE_RIGHT_ARROWS[dir];
+        el.classList.add(`dir-${dir}`);
+    } else if (type === 'conveyor-curve-left') {
+        el.innerText = CURVE_LEFT_ARROWS[dir];
         el.classList.add(`dir-${dir}`);
     } else if (type.startsWith('source-')) {
         const elem = type.replace('source-', '').toUpperCase();
@@ -307,12 +330,12 @@ function buildEntity(x, y, type) {
         dir, 
         obj: el, 
         inventory: {},
-        selectedRecipe: 'AUTO' // Standaard automatisch
+        selectedRecipe: 'AUTO'
     };
     gridContainer.appendChild(el);
 }
 
-// --- MIXER RECEPT SELECTIE MODAL ---
+// MIXER RECEPT SELECTIE MODAL
 function openMixerModal(key) {
     activeMixerKey = key;
     const entity = grid[key];
@@ -321,7 +344,6 @@ function openMixerModal(key) {
     const optionsContainer = document.getElementById('modal-recipe-options');
     optionsContainer.innerHTML = '';
 
-    // Optie 1: Automatisch
     const autoBtn = document.createElement('button');
     const isAuto = entity.selectedRecipe === 'AUTO';
     autoBtn.className = `w-full p-2.5 rounded border text-left text-xs transition flex justify-between items-center ${isAuto ? 'bg-amber-600/30 border-amber-500 text-white font-bold' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}`;
@@ -335,7 +357,6 @@ function openMixerModal(key) {
     autoBtn.onclick = () => setMixerRecipe('AUTO');
     optionsContainer.appendChild(autoBtn);
 
-    // Recepten die al vrijgespeeld zijn
     RECIPES.filter(r => r.lvl <= playerLevel).forEach(r => {
         const isSelected = entity.selectedRecipe === r.id;
         const reqStr = Object.entries(r.req).map(([el, cnt]) => `${cnt}x ${el}`).join(', ');
@@ -395,7 +416,7 @@ function spawnItem(type, x, y) {
     el.style.backgroundColor = color;
     if (type.length > 3) el.style.fontSize = '8px';
 
-    updateVisualPosition(el, x, y);
+    updateVisualPosition(el, x, y, 0);
     gridContainer.appendChild(el);
 
     items.push({
@@ -408,9 +429,16 @@ function spawnItem(type, x, y) {
     });
 }
 
-function updateVisualPosition(element, x, y) {
-    element.style.left = `${(x * CELL_SIZE) + 13}px`;
-    element.style.top = `${(y * CELL_SIZE) + 13}px`;
+// Berekent positie met lichte verschuiving (slot) voor maximaal 3 items op één cel
+function updateVisualPosition(element, x, y, slot = 0) {
+    const offsets = [
+        { dx: 14, dy: 14 },
+        { dx: 5, dy: 5 },
+        { dx: 23, dy: 23 }
+    ];
+    const offset = offsets[slot % 3] || { dx: 14, dy: 14 };
+    element.style.left = `${(x * CELL_SIZE) + offset.dx}px`;
+    element.style.top = `${(y * CELL_SIZE) + offset.dy}px`;
 }
 
 function gameTick() {
@@ -420,8 +448,8 @@ function gameTick() {
             const [x, y] = key.split(',').map(Number);
             const elemType = entity.type.replace('source-', '').toUpperCase();
             
-            const hasItem = items.find(i => i.x === x && i.y === y);
-            if (!hasItem) {
+            const cellItems = items.filter(i => i.x === x && i.y === y);
+            if (cellItems.length < 3) {
                 spawnItem(elemType, x, y);
             }
         }
@@ -455,12 +483,14 @@ function gameTick() {
                 if (nextX >= 0 && nextX < GRID_WIDTH && nextY >= 0 && nextY < GRID_HEIGHT) {
                     if (nextCell && (nextCell.type.startsWith('conveyor') || nextCell.type === 'mixer' || nextCell.type === 'inleverpunt')) {
                         
-                        const blockingItem = items.find(i => i.x === nextX && i.y === nextY);
+                        const itemsOnNextCell = items.filter(i => i.x === nextX && i.y === nextY);
+                        // Lopende banden kunnen tot 3 items vasthouden
+                        const maxCap = nextCell.type.startsWith('conveyor') ? 3 : 1;
                         
-                        if (!blockingItem) {
+                        if (itemsOnNextCell.length < maxCap) {
                             item.x = nextX;
                             item.y = nextY;
-                            updateVisualPosition(item.visual, item.x, item.y);
+                            updateVisualPosition(item.visual, item.x, item.y, itemsOnNextCell.length);
                             item.movedThisTick = true;
 
                             if (nextCell.type === 'mixer') {
@@ -520,9 +550,11 @@ function gameTick() {
                         const targetCell = grid[`${tx},${ty}`];
 
                         if (targetCell && (targetCell.type.startsWith('conveyor') || targetCell.type === 'inleverpunt' || targetCell.type === 'mixer')) {
-                            const blockingItem = items.find(i => i.x === tx && i.y === ty);
-                            if (!blockingItem) {
-                                outputTarget = { x: tx, y: ty };
+                            const itemsOnTarget = items.filter(i => i.x === tx && i.y === ty);
+                            const maxCap = targetCell.type.startsWith('conveyor') ? 3 : 1;
+
+                            if (itemsOnTarget.length < maxCap) {
+                                outputTarget = { x: tx, y: ty, slot: itemsOnTarget.length };
                                 break;
                             }
                         }
@@ -561,7 +593,6 @@ function gameTick() {
     });
 }
 
-// VERKOOP FABRIEK & HERSTART / GRID ONTRUIMEN
 function sellEntireFactory() {
     let totalRefund = 0;
 
@@ -569,7 +600,7 @@ function sellEntireFactory() {
         const entity = grid[key];
         const buildingDef = BUILDINGS.find(b => b.id === entity.type);
         if (buildingDef && buildingDef.price > 0) {
-            totalRefund += buildingDef.price; // 100% verkoopwaarde voor complete fabriek!
+            totalRefund += buildingDef.price;
         }
         if (entity.obj && entity.obj.parentNode) {
             entity.obj.parentNode.removeChild(entity.obj);
@@ -585,8 +616,8 @@ function sellEntireFactory() {
     money += totalRefund;
     updateUI();
 
-    const centerX = Math.floor(GRID_WIDTH / 2);
-    const centerY = Math.floor(GRID_HEIGHT / 2);
+    const centerX = Math.floor((window.innerWidth - 340) / (2 * CELL_SIZE));
+    const centerY = Math.floor(window.innerHeight / (2 * CELL_SIZE));
     showFloatingText(`${centerX},${centerY}`, `🏢 FABRIEK VERKOCHT (+€${totalRefund.toLocaleString('nl-NL')})`, "#fbc531");
 }
 
@@ -597,7 +628,6 @@ function upgradeLevel() {
         money -= cost;
         playerLevel++;
         
-        // Grid leeghalen
         for (const key in grid) {
             if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
         }
@@ -606,13 +636,12 @@ function upgradeLevel() {
         items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
         items = [];
 
-        // Geef een leuk startkapitaal voor de nieuwe fase!
         money += 1000;
         
         updateUI();
         
-        const centerX = Math.floor(GRID_WIDTH / 2);
-        const centerY = Math.floor(GRID_HEIGHT / 2);
+        const centerX = Math.floor((window.innerWidth - 340) / (2 * CELL_SIZE));
+        const centerY = Math.floor(window.innerHeight / (2 * CELL_SIZE));
         showFloatingText(`${centerX},${centerY}`, `🚀 FABRIEK GEÜPGRADED NAAR LVL ${playerLevel}!`, "#fbc531");
     } else {
         alert("Niet genoeg saldo om je fabriek te upgraden!");
@@ -647,14 +676,5 @@ function showFloatingText(key, text, color) {
     }, 1050);
 }
 
-document.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'r') {
-        selectTool('rotate', 0);
-    }
-});
-
-gridContainer.addEventListener('contextmenu', (e) => e.preventDefault());
-
-initGrid();
-updateUI();
-setInterval(gameTick, TICK_RATE);
+// SNELTOETSEN (R = Draaien, X = Delete)
+document.addEventListener
