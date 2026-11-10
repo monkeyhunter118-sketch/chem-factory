@@ -46,7 +46,6 @@ body {
     border-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Blauwdruk markering */
 .grid-cell-bp-start {
     border: 2px dashed #60a5fa !important;
     background-color: rgba(96, 165, 250, 0.25) !important;
@@ -60,20 +59,19 @@ body {
     background-size: 20px 20px !important;
 }
 
-/* Striped moving backgrounds for conveyors */
-.conveyor.dir-0, .conveyor-curve.dir-0, .conveyor-curve-left.dir-0 { /* UP */
+.conveyor.dir-0, .conveyor-curve.dir-0, .conveyor-curve-left.dir-0 {
     background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-up 0.8s linear infinite;
 }
-.conveyor.dir-1, .conveyor-curve.dir-1, .conveyor-curve-left.dir-1 { /* RIGHT */
+.conveyor.dir-1, .conveyor-curve.dir-1, .conveyor-curve-left.dir-1 {
     background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-right 0.8s linear infinite;
 }
-.conveyor.dir-2, .conveyor-curve.dir-2, .conveyor-curve-left.dir-2 { /* DOWN */
+.conveyor.dir-2, .conveyor-curve.dir-2, .conveyor-curve-left.dir-2 {
     background-image: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-down 0.8s linear infinite;
 }
-.conveyor.dir-3, .conveyor-curve.dir-3, .conveyor-curve-left.dir-3 { /* LEFT */
+.conveyor.dir-3, .conveyor-curve.dir-3, .conveyor-curve-left.dir-3 {
     background-image: repeating-linear-gradient(270deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-left 0.8s linear infinite;
 }
@@ -147,9 +145,9 @@ body {
 
 /* Tabs Styling */
 .tab-btn.active {
-    background-color: #1f2937;
-    color: #fbbf24;
-    border-color: #374151;
+    background-color: #1f2937 !important;
+    color: #fbbf24 !important;
+    border-color: #374151 !important;
 }
 
 .btn-build {
@@ -181,7 +179,6 @@ body {
     cursor: not-allowed; 
 }
 
-/* Custom Scrollbar for Sidebar */
 ::-webkit-scrollbar {
     width: 6px;
 }

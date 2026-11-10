@@ -1,20 +1,21 @@
 const CELL_SIZE = 50;
 let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE) * 3;
 let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE) * 3;
-const TICK_RATE = 1600; // ms per tick
+const TICK_RATE = 1600;
 
 // Game State
 let money = 1000;
 let playerLevel = 1;
 let selectedTool = 'cursor';
 let toolPrice = 0;
-let currentBuildDir = 1; // 0=Up, 1=Right, 2=Down, 3=Left
+let currentBuildDir = 1;
 let activeMixerKey = null;
+let currentTab = 'build'; // State tracking voor tabbladen
 
 // Blauwdruk State
-let savedBlueprint = null; // Array van items relative to top-left
+let savedBlueprint = null;
 let blueprintCost = 0;
-let blueprintStep = 0; // 0=Geen, 1=Wacht op start, 2=Wacht op einde
+let blueprintStep = 0;
 let bpStartX = null;
 let bpStartY = null;
 
@@ -75,7 +76,6 @@ const BUILDINGS = [
     { id: 'mixer', name: '🧪 Chemische Mixer', price: 300, lvl: 1 },
     { id: 'inleverpunt', name: '🏢 Inleverpunt (Max 3)', price: 100, lvl: 1 },
     
-    // Bronnen in periodiek systeem volgorde
     { id: 'source-h', name: '💧 H-Bron (Waterstof)', price: 100, lvl: 1 },
     { id: 'source-c', name: '🪨 C-Bron (Koolstof)', price: 400, lvl: 2 },
     { id: 'source-n', name: '💨 N-Bron (Stikstof)', price: 500, lvl: 2 },
@@ -119,8 +119,9 @@ function initGrid() {
     }
 }
 
-// SWITCH TABBLADEN
+// TABBLAD WISSELEN
 function switchTab(tabName) {
+    currentTab = tabName;
     const buildTabBtn = document.getElementById('tab-btn-build');
     const recipesTabBtn = document.getElementById('tab-btn-recipes');
     const buildContent = document.getElementById('tab-content-build');
@@ -158,6 +159,7 @@ function updateUI() {
         document.getElementById('next-level-cost').innerText = `€ 500.000`;
     }
 
+    // Render Gebouwen
     const btnContainer = document.getElementById('build-buttons');
     btnContainer.innerHTML = '';
     
@@ -191,7 +193,6 @@ function updateUI() {
         btnContainer.appendChild(btn);
     });
 
-    // Update blauwdruk status card
     const bpCard = document.getElementById('blueprint-status-card');
     const bpText = document.getElementById('blueprint-status-text');
     if (savedBlueprint) {
@@ -201,6 +202,7 @@ function updateUI() {
         bpCard.classList.add('hidden');
     }
 
+    // Render Recepten & Waarde Lijst
     const recipeContainer = document.getElementById('recipe-list');
     recipeContainer.innerHTML = '';
 
@@ -209,7 +211,13 @@ function updateUI() {
         const reqStr = Object.entries(r.req).map(([el, cnt]) => `${cnt}x ${el}`).join(', ');
         
         const card = document.createElement('div');
-        card.className = `p-2 rounded border text-xs flex justify-between items-center ${unlocked ? 'bg-gray-800/60 border-gray-700' : 'bg-gray-900/30 border-gray-800 opacity-40'}`;
+        card.className = `p-2.5 rounded border text-xs flex justify-between items-center transition cursor-pointer ${unlocked ? 'bg-gray-800/80 border-gray-700 hover:border-gray-500' : 'bg-gray-900/30 border-gray-800 opacity-40'}`;
+        card.onclick = () => {
+            if (unlocked) {
+                alert(`🧪 ${r.name} (${r.formula})\nOpbrengst: €${r.value.toLocaleString('nl-NL')}\nNodige grondstoffen: ${reqStr}`);
+            }
+        };
+
         card.innerHTML = `
             <div>
                 <div class="font-bold" style="color: ${unlocked ? r.color : '#888'}">${r.formula} - ${r.name}</div>
@@ -228,7 +236,6 @@ function selectTool(toolId, price) {
         return;
     }
 
-    // Blauwdruk logica: als er al een blauwdruk is opgeslagen en je drukt nogmaals op de knop -> Meteen plaatsen!
     if (toolId === 'blueprint') {
         if (savedBlueprint) {
             selectedTool = 'blueprint_place';
@@ -253,14 +260,12 @@ function selectTool(toolId, price) {
 function handleGridClick(x, y) {
     const key = `${x},${y}`;
 
-    // --- BLAUWDRUK MAKEN MODUS ---
     if (selectedTool === 'blueprint_create') {
         if (blueprintStep === 1) {
             bpStartX = x;
             bpStartY = y;
             blueprintStep = 2;
             
-            // Visual highlight
             const startEl = document.getElementById(`cell-${x}-${y}`);
             if (startEl) startEl.classList.add('grid-cell-bp-start');
 
@@ -272,7 +277,6 @@ function handleGridClick(x, y) {
             const minY = Math.min(bpStartY, y);
             const maxY = Math.max(bpStartY, y);
 
-            // Verwijder visual highlights
             const startEl = document.getElementById(`cell-${bpStartX}-${bpStartY}`);
             if (startEl) startEl.classList.remove('grid-cell-bp-start');
 
@@ -304,7 +308,7 @@ function handleGridClick(x, y) {
             } else {
                 blueprintCost = totalBpCost;
                 blueprintStep = 0;
-                selectedTool = 'blueprint_place'; // Direct overschakelen naar plaatsmodus!
+                selectedTool = 'blueprint_place';
                 showFloatingText(key, `📋 Blauwdruk Opgeslagen! (${savedBlueprint.length} gebouwen)`, "#20bf6b");
             }
 
@@ -313,17 +317,14 @@ function handleGridClick(x, y) {
         }
     }
 
-    // --- BLAUWDRUK PLAATSEN MODUS ---
     if (selectedTool === 'blueprint_place') {
         if (!savedBlueprint || savedBlueprint.length === 0) return;
 
-        // Check of speler genoeg geld heeft
         if (money < blueprintCost) {
             showFloatingText(key, `Niet genoeg geld! (€${blueprintCost.toLocaleString('nl-NL')} nodig)`, "#ff6b6b");
             return;
         }
 
-        // Check max 3 inleverpunten regel
         const bpInleverpunten = savedBlueprint.filter(b => b.type === 'inleverpunt').length;
         const currentInleverpunten = Object.values(grid).filter(cell => cell.type === 'inleverpunt').length;
         if (currentInleverpunten + bpInleverpunten > 3) {
@@ -333,14 +334,12 @@ function handleGridClick(x, y) {
 
         money -= blueprintCost;
 
-        // Bouw alle elementen uit de blauwdruk relatief t.o.v. de gekozen cel
         savedBlueprint.forEach(item => {
             const tx = x + item.relX;
             const ty = y + item.relY;
             const tKey = `${tx},${ty}`;
 
             if (tx >= 0 && tx < GRID_WIDTH && ty >= 0 && ty < GRID_HEIGHT) {
-                // Verwijder eventueel aanwezig gebouw op die plek
                 if (grid[tKey]) {
                     if (grid[tKey].obj && grid[tKey].obj.parentNode) {
                         grid[tKey].obj.parentNode.removeChild(grid[tKey].obj);
@@ -348,7 +347,6 @@ function handleGridClick(x, y) {
                     delete grid[tKey];
                 }
 
-                // Plaats gebouw uit blauwdruk
                 buildEntityWithDirAndRecipe(tx, ty, item.type, item.dir, item.selectedRecipe);
             }
         });
@@ -358,7 +356,6 @@ function handleGridClick(x, y) {
         return;
     }
 
-    // DELETE MODUS
     if (selectedTool === 'delete') {
         if (grid[key]) {
             const buildingDef = BUILDINGS.find(b => b.id === grid[key].type);
@@ -386,13 +383,11 @@ function handleGridClick(x, y) {
         return;
     }
 
-    // MODAL OPENEN OP MIXER
     if (grid[key] && grid[key].type === 'mixer' && selectedTool === 'cursor') {
         openMixerModal(key);
         return;
     }
 
-    // LOPENDE BAND ROTEREN
     if (grid[key] && (grid[key].type === 'conveyor' || grid[key].type === 'conveyor-curve' || grid[key].type === 'conveyor-curve-left')) {
         if (selectedTool === 'cursor' || selectedTool === grid[key].type) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
@@ -408,7 +403,6 @@ function handleGridClick(x, y) {
 
     if (selectedTool === 'cursor') return;
 
-    // MAX 3 INLEVERPUNTEN REGEL
     if (selectedTool === 'inleverpunt' && (!grid[key] || grid[key].type !== 'inleverpunt')) {
         const currentInleverpunten = Object.values(grid).filter(cell => cell.type === 'inleverpunt').length;
         if (currentInleverpunten >= 3) {
@@ -417,7 +411,6 @@ function handleGridClick(x, y) {
         }
     }
 
-    // GEBOUW PLAATSEN
     if (grid[key]) {
         if (grid[key].type === selectedTool) return;
 
@@ -511,7 +504,6 @@ function resetBlueprint() {
     updateUI();
 }
 
-// MIXER RECEPT SELECTIE MODAL
 function openMixerModal(key) {
     activeMixerKey = key;
     const entity = grid[key];
@@ -849,7 +841,6 @@ function showFloatingText(key, text, color) {
     }, 1050);
 }
 
-// SNELTOETSEN (R = Draaien, X = Delete)
 document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'r') {
         selectTool('rotate', 0);
