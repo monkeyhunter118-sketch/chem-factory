@@ -1,7 +1,7 @@
 const CELL_SIZE = 50;
 let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE);
 let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE);
-const TICK_RATE = 1600; // ms per tick (Tick rate gehalveerd naar 1600ms)
+const TICK_RATE = 1600; // ms per tick (gehalveerd tempo)
 
 // Game State
 let money = 1000;
@@ -9,28 +9,51 @@ let playerLevel = 1;
 let selectedTool = 'cursor';
 let toolPrice = 0;
 let currentBuildDir = 1; // 0=Up, 1=Right, 2=Down, 3=Left
+let activeMixerKey = null; // Houdt bij welke mixer geopend is in het modal
 
 // Level config
 const LEVEL_CONFIG = {
-    1: { title: "Basiselementen (H₂O)", costNext: 1500 },
-    2: { title: "Organische Basis (CO₂, NH₃, CH₄)", costNext: 8000 },
-    3: { title: "Zuren & Mineralen (HCl, SO₂, H₂SO₄)", costNext: 35000 },
-    4: { title: "Industriële Synthese (Glucose)", costNext: null }
+    1: { title: "Basiselementen (H₂O, H₂O₂)", costNext: 1500 },
+    2: { title: "Organische Basis (CO₂, NH₃, CH₄, H₂CO₃)", costNext: 8000 },
+    3: { title: "Zuren & Gassen (HCl, SO₂, NO₂, HNO₃, H₂SO₄)", costNext: 35000 },
+    4: { title: "Industriële Synthese (Glucose, Ethanol, Chloroform)", costNext: 100000 },
+    5: { title: "Geavanceerde Biochemie & Explosieven (TNT)", costNext: 250000 }
 };
 
-// Chemical Recipes
+// Chemical Recipes (Uitgebreid met veel meer stoffen)
 const RECIPES = [
+    // Level 1
     { id: 'H2O', name: 'Water', formula: 'H₂O', req: { 'H': 2, 'O': 1 }, value: 60, lvl: 1, color: '#38ada9' },
+    { id: 'H2O2', name: 'Waterstofperoxide', formula: 'H₂O₂', req: { 'H': 2, 'O': 2 }, value: 120, lvl: 1, color: '#74b9ff' },
+    
+    // Level 2
+    { id: 'CO', name: 'Koolmonoxide', formula: 'CO', req: { 'C': 1, 'O': 1 }, value: 90, lvl: 2, color: '#b2bec3' },
     { id: 'CO2', name: 'Koolstofdioxide', formula: 'CO₂', req: { 'C': 1, 'O': 2 }, value: 150, lvl: 2, color: '#78e08f' },
     { id: 'NH3', name: 'Ammoniak', formula: 'NH₃', req: { 'N': 1, 'H': 3 }, value: 220, lvl: 2, color: '#f6b93b' },
     { id: 'CH4', name: 'Methaan', formula: 'CH₄', req: { 'C': 1, 'H': 4 }, value: 350, lvl: 2, color: '#e67e22' },
+    { id: 'H2CO3', name: 'Koolzuur', formula: 'H₂CO₃', req: { 'H': 2, 'C': 1, 'O': 3 }, value: 480, lvl: 2, color: '#a29bfe' },
+
+    // Level 3
     { id: 'HCl', name: 'Zoutzuur', formula: 'HCl', req: { 'H': 1, 'Cl': 1 }, value: 180, lvl: 3, color: '#e55039' },
     { id: 'SO2', name: 'Zwaveldioxide', formula: 'SO₂', req: { 'S': 1, 'O': 2 }, value: 280, lvl: 3, color: '#4a69bd' },
+    { id: 'NO2', name: 'Stikstofdioxide', formula: 'NO₂', req: { 'N': 1, 'O': 2 }, value: 320, lvl: 3, color: '#fd79a8' },
+    { id: 'Cl2', name: 'Chloorgas', formula: 'Cl₂', req: { 'Cl': 2 }, value: 400, lvl: 3, color: '#00b894' },
+    { id: 'HNO3', name: 'Salpeterzuur', formula: 'HNO₃', req: { 'H': 1, 'N': 1, 'O': 3 }, value: 1200, lvl: 3, color: '#ff7675' },
     { id: 'H2SO4', name: 'Zwavelzuur', formula: 'H₂SO₄', req: { 'H': 2, 'S': 1, 'O': 4 }, value: 1500, lvl: 3, color: '#b8e994' },
-    { id: 'C6H12O6', name: 'Glucose', formula: 'C₆H₁₂O₆', req: { 'C': 6, 'H': 12, 'O': 6 }, value: 8500, lvl: 4, color: '#f8c291' }
+
+    // Level 4
+    { id: 'C2H6O', name: 'Ethanol', formula: 'C₂H₆O', req: { 'C': 2, 'H': 6, 'O': 1 }, value: 2400, lvl: 4, color: '#fdcb6e' },
+    { id: 'C2H4O2', name: 'Azijnzuur', formula: 'C₂H₄O₂', req: { 'C': 2, 'H': 4, 'O': 2 }, value: 3100, lvl: 4, color: '#e17055' },
+    { id: 'CHCl3', name: 'Chloroform', formula: 'CHCl₃', req: { 'C': 1, 'H': 1, 'Cl': 3 }, value: 5200, lvl: 4, color: '#00cec9' },
+    { id: 'CH4N2O', name: 'Ureum', formula: 'CH₄N₂O', req: { 'C': 1, 'H': 4, 'N': 2, 'O': 1 }, value: 6800, lvl: 4, color: '#6c5ce7' },
+    { id: 'C6H12O6', name: 'Glucose', formula: 'C₆H₁₂O₆', req: { 'C': 6, 'H': 12, 'O': 6 }, value: 8500, lvl: 4, color: '#f8c291' },
+
+    // Level 5
+    { id: 'C3H5N3O9', name: 'Nitroglycerine', formula: 'C₃H₅N₃O₉', req: { 'C': 3, 'H': 5, 'N': 3, 'O': 9 }, value: 18500, lvl: 5, color: '#d63031' },
+    { id: 'C7H5N3O6', name: 'TNT', formula: 'C₇H₅N₃O₆', req: { 'C': 7, 'H': 5, 'N': 3, 'O': 6 }, value: 35000, lvl: 5, color: '#ff4757' }
 ];
 
-// Raw Element Values (Geordend op atoomnummer: H=1, C=6, N=7, O=8, S=16, Cl=17)
+// Raw Element Values
 const ELEMENT_VALUES = {
     'H': 2, 'C': 5, 'N': 8, 'O': 3, 'S': 12, 'Cl': 15
 };
@@ -39,16 +62,16 @@ const ELEMENT_COLORS = {
     'H': '#48dbfb', 'C': '#ffffff', 'N': '#a55eea', 'O': '#ff6b6b', 'S': '#fecb57', 'Cl': '#1dd1a1'
 };
 
-// Available Buildings Definition (Bronnen geordend volgens het Periodiek Systeem)
+// Available Buildings Definition (Geordend volgens het Periodiek Systeem: H, C, N, O, S, Cl)
 const BUILDINGS = [
-    { id: 'cursor', name: '🖱️ Muis (Deselecteren)', price: 0, lvl: 1 },
+    { id: 'cursor', name: '🖱️ Muis (Deselecteren / Instellen)', price: 0, lvl: 1 },
     { id: 'rotate', name: '🔄 Bouwrichting [Sneltoets: R]', price: 0, lvl: 1 },
     { id: 'conveyor', name: 'Lopende Band', price: 10, lvl: 1 },
     { id: 'conveyor-curve', name: 'Bocht Band', price: 15, lvl: 1 },
     { id: 'mixer', name: '🧪 Chemische Mixer', price: 300, lvl: 1 },
     { id: 'inleverpunt', name: '🏢 Inleverpunt (Verkoop)', price: 100, lvl: 1 },
     
-    // Elementbronnen in volgorde van periodiek systeem
+    // Bronnen in periodiek systeem volgorde
     { id: 'source-h', name: '💧 H-Bron (Waterstof)', price: 100, lvl: 1 },
     { id: 'source-c', name: '🪨 C-Bron (Koolstof)', price: 400, lvl: 2 },
     { id: 'source-n', name: '💨 N-Bron (Stikstof)', price: 500, lvl: 2 },
@@ -90,16 +113,20 @@ function initGrid() {
 function updateUI() {
     document.getElementById('money-display').innerText = `€ ${money.toLocaleString('nl-NL')}`;
     document.getElementById('level-badge').innerText = `Lvl ${playerLevel}`;
-    document.getElementById('level-title').innerText = LEVEL_CONFIG[playerLevel].title;
+    document.getElementById('level-title').innerText = LEVEL_CONFIG[playerLevel] ? LEVEL_CONFIG[playerLevel].title : "Prestige Master";
 
     const nextLvl = playerLevel + 1;
     const upgradeBtn = document.getElementById('btn-upgrade-level');
-    if (LEVEL_CONFIG[playerLevel].costNext) {
+    const cost = LEVEL_CONFIG[playerLevel] ? LEVEL_CONFIG[playerLevel].costNext : null;
+    
+    if (cost) {
         upgradeBtn.style.display = 'flex';
         document.getElementById('next-level-num').innerText = nextLvl;
-        document.getElementById('next-level-cost').innerText = `€ ${LEVEL_CONFIG[playerLevel].costNext.toLocaleString('nl-NL')}`;
+        document.getElementById('next-level-cost').innerText = `€ ${cost.toLocaleString('nl-NL')}`;
     } else {
-        upgradeBtn.style.display = 'none';
+        upgradeBtn.style.display = 'flex';
+        document.getElementById('next-level-num').innerText = `${playerLevel} (Prestige)`;
+        document.getElementById('next-level-cost').innerText = `€ 500.000`;
     }
 
     const btnContainer = document.getElementById('build-buttons');
@@ -138,7 +165,7 @@ function updateUI() {
                 <div class="font-bold" style="color: ${unlocked ? r.color : '#888'}">${r.formula} - ${r.name}</div>
                 <div class="text-[10px] text-gray-400">${unlocked ? 'Nodig: ' + reqStr : 'Vereist Lvl ' + r.lvl}</div>
             </div>
-            <div class="font-black ${unlocked ? 'text-green-400' : 'text-gray-500'}">€${r.value}</div>
+            <div class="font-black ${unlocked ? 'text-green-400' : 'text-gray-500'}">€${r.value.toLocaleString('nl-NL')}</div>
         `;
         recipeContainer.appendChild(card);
     });
@@ -161,6 +188,7 @@ function selectTool(toolId, price) {
 function handleGridClick(x, y) {
     const key = `${x},${y}`;
 
+    // DELETE MODUS
     if (selectedTool === 'delete') {
         if (grid[key]) {
             const buildingDef = BUILDINGS.find(b => b.id === grid[key].type);
@@ -177,9 +205,7 @@ function handleGridClick(x, y) {
 
             const itemsToDelete = items.filter(i => i.x === x && i.y === y);
             itemsToDelete.forEach(item => {
-                if (item.visual && item.visual.parentNode) {
-                    item.visual.parentNode.removeChild(item.visual);
-                }
+                if (item.visual && item.visual.parentNode) item.visual.parentNode.removeChild(item.visual);
                 const idx = items.indexOf(item);
                 if (idx > -1) items.splice(idx, 1);
             });
@@ -190,6 +216,13 @@ function handleGridClick(x, y) {
         return;
     }
 
+    // ALS SPIELER OP AANWEZIGE MIXER KLIKT MET KEUZEMUIS -> MODAL OPENEN!
+    if (grid[key] && grid[key].type === 'mixer' && selectedTool === 'cursor') {
+        openMixerModal(key);
+        return;
+    }
+
+    // LOPENDE BAND ROTEREN
     if (grid[key] && (grid[key].type === 'conveyor' || grid[key].type === 'conveyor-curve')) {
         if (selectedTool === 'cursor' || selectedTool === grid[key].type) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
@@ -202,6 +235,7 @@ function handleGridClick(x, y) {
 
     if (selectedTool === 'cursor') return;
 
+    // GEBOUW PLAATSEN
     if (grid[key]) {
         if (grid[key].type === selectedTool) return;
 
@@ -263,7 +297,7 @@ function buildEntity(x, y, type) {
         const elem = type.replace('source-', '').toUpperCase();
         el.innerText = elem;
     } else if (type === 'mixer') {
-        el.innerText = '🧪';
+        el.innerHTML = `🧪<span class="mixer-label" id="label-${x}-${y}">AUTO</span>`;
     } else if (type === 'inleverpunt') {
         el.innerText = '🏢';
     }
@@ -272,9 +306,83 @@ function buildEntity(x, y, type) {
         type, 
         dir, 
         obj: el, 
-        inventory: {} 
+        inventory: {},
+        selectedRecipe: 'AUTO' // Standaard automatisch
     };
     gridContainer.appendChild(el);
+}
+
+// --- MIXER RECEPT SELECTIE MODAL ---
+function openMixerModal(key) {
+    activeMixerKey = key;
+    const entity = grid[key];
+    if (!entity) return;
+
+    const optionsContainer = document.getElementById('modal-recipe-options');
+    optionsContainer.innerHTML = '';
+
+    // Optie 1: Automatisch
+    const autoBtn = document.createElement('button');
+    const isAuto = entity.selectedRecipe === 'AUTO';
+    autoBtn.className = `w-full p-2.5 rounded border text-left text-xs transition flex justify-between items-center ${isAuto ? 'bg-amber-600/30 border-amber-500 text-white font-bold' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}`;
+    autoBtn.innerHTML = `
+        <div>
+            <div class="font-bold">🔄 Automatisch</div>
+            <div class="text-[10px] text-gray-400">Maakt automatisch de meest waardevolle beschikbare stof.</div>
+        </div>
+        ${isAuto ? '<span class="text-amber-400 text-sm">✓</span>' : ''}
+    `;
+    autoBtn.onclick = () => setMixerRecipe('AUTO');
+    optionsContainer.appendChild(autoBtn);
+
+    // Recepten die al vrijgespeeld zijn
+    RECIPES.filter(r => r.lvl <= playerLevel).forEach(r => {
+        const isSelected = entity.selectedRecipe === r.id;
+        const reqStr = Object.entries(r.req).map(([el, cnt]) => `${cnt}x ${el}`).join(', ');
+
+        const btn = document.createElement('button');
+        btn.className = `w-full p-2.5 rounded border text-left text-xs transition flex justify-between items-center ${isSelected ? 'bg-amber-600/30 border-amber-500 text-white font-bold' : 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700'}`;
+        btn.innerHTML = `
+            <div>
+                <div class="font-bold" style="color: ${r.color}">${r.formula} - ${r.name}</div>
+                <div class="text-[10px] text-gray-400">Nodig: ${reqStr}</div>
+            </div>
+            <div class="text-right">
+                <div class="text-green-400 font-bold">€${r.value.toLocaleString('nl-NL')}</div>
+                ${isSelected ? '<span class="text-amber-400 text-xs">✓ Actief</span>' : ''}
+            </div>
+        `;
+        btn.onclick = () => setMixerRecipe(r.id);
+        optionsContainer.appendChild(btn);
+    });
+
+    document.getElementById('mixer-modal').classList.remove('hidden');
+}
+
+function setMixerRecipe(recipeId) {
+    if (!activeMixerKey || !grid[activeMixerKey]) return;
+    grid[activeMixerKey].selectedRecipe = recipeId;
+
+    const [x, y] = activeMixerKey.split(',').map(Number);
+    const labelEl = document.getElementById(`label-${x}-${y}`);
+    if (labelEl) {
+        if (recipeId === 'AUTO') {
+            labelEl.innerText = 'AUTO';
+            labelEl.style.color = '#88eaab';
+        } else {
+            const rec = RECIPES.find(r => r.id === recipeId);
+            labelEl.innerText = rec ? rec.formula : recipeId;
+            labelEl.style.color = rec ? rec.color : '#ffffff';
+        }
+    }
+
+    closeMixerModal();
+    showFloatingText(activeMixerKey, recipeId === 'AUTO' ? '🧪 Recept: Auto' : `🧪 ${recipeId}`, "#20bf6b");
+}
+
+function closeMixerModal() {
+    document.getElementById('mixer-modal').classList.add('hidden');
+    activeMixerKey = null;
 }
 
 function spawnItem(type, x, y) {
@@ -365,7 +473,7 @@ function gameTick() {
 
                                 money += value;
                                 updateUI();
-                                showFloatingText(nextKey, `+€${value}`, "#20bf6b");
+                                showFloatingText(nextKey, `+€${value.toLocaleString('nl-NL')}`, "#20bf6b");
                                 itemsToRemove.push(item);
                             }
                             
@@ -377,13 +485,23 @@ function gameTick() {
         }
     });
 
+    // VERWERK MIXERS
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type === 'mixer') {
-            const availableRecipes = RECIPES.filter(r => r.lvl <= playerLevel)
-                .sort((a, b) => b.value - a.value);
+            let targetRecipes = [];
 
-            for (const recipe of availableRecipes) {
+            if (entity.selectedRecipe && entity.selectedRecipe !== 'AUTO') {
+                const specificRecipe = RECIPES.find(r => r.id === entity.selectedRecipe);
+                if (specificRecipe && specificRecipe.lvl <= playerLevel) {
+                    targetRecipes = [specificRecipe];
+                }
+            } else {
+                targetRecipes = RECIPES.filter(r => r.lvl <= playerLevel)
+                    .sort((a, b) => b.value - a.value);
+            }
+
+            for (const recipe of targetRecipes) {
                 let canMake = true;
                 for (const [elem, count] of Object.entries(recipe.req)) {
                     if ((entity.inventory[elem] || 0) < count) {
@@ -420,7 +538,7 @@ function gameTick() {
                         if (targetCell.type === 'inleverpunt') {
                             money += recipe.value;
                             updateUI();
-                            showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+€${recipe.value}`, "#20bf6b");
+                            showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+€${recipe.value.toLocaleString('nl-NL')}`, "#20bf6b");
                         } else if (targetCell.type === 'mixer') {
                             targetCell.inventory[recipe.id] = (targetCell.inventory[recipe.id] || 0) + 1;
                             showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+${recipe.id}`, recipe.color);
@@ -443,14 +561,43 @@ function gameTick() {
     });
 }
 
+// VERKOOP FABRIEK & HERSTART / GRID ONTRUIMEN
+function sellEntireFactory() {
+    let totalRefund = 0;
+
+    for (const key in grid) {
+        const entity = grid[key];
+        const buildingDef = BUILDINGS.find(b => b.id === entity.type);
+        if (buildingDef && buildingDef.price > 0) {
+            totalRefund += buildingDef.price; // 100% verkoopwaarde voor complete fabriek!
+        }
+        if (entity.obj && entity.obj.parentNode) {
+            entity.obj.parentNode.removeChild(entity.obj);
+        }
+        delete grid[key];
+    }
+
+    items.forEach(i => {
+        if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual);
+    });
+    items = [];
+
+    money += totalRefund;
+    updateUI();
+
+    const centerX = Math.floor(GRID_WIDTH / 2);
+    const centerY = Math.floor(GRID_HEIGHT / 2);
+    showFloatingText(`${centerX},${centerY}`, `🏢 FABRIEK VERKOCHT (+€${totalRefund.toLocaleString('nl-NL')})`, "#fbc531");
+}
+
 function upgradeLevel() {
-    const cost = LEVEL_CONFIG[playerLevel].costNext;
-    if (!cost) return;
+    const cost = LEVEL_CONFIG[playerLevel] ? LEVEL_CONFIG[playerLevel].costNext : 500000;
 
     if (money >= cost) {
+        money -= cost;
         playerLevel++;
-        money = 1000;
         
+        // Grid leeghalen
         for (const key in grid) {
             if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
         }
@@ -458,12 +605,15 @@ function upgradeLevel() {
 
         items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
         items = [];
+
+        // Geef een leuk startkapitaal voor de nieuwe fase!
+        money += 1000;
         
         updateUI();
         
         const centerX = Math.floor(GRID_WIDTH / 2);
         const centerY = Math.floor(GRID_HEIGHT / 2);
-        showFloatingText(`${centerX},${centerY}`, "🚀 FABRIEK GEÜPGRADED!", "#fbc531");
+        showFloatingText(`${centerX},${centerY}`, `🚀 FABRIEK GEÜPGRADED NAAR LVL ${playerLevel}!`, "#fbc531");
     } else {
         alert("Niet genoeg saldo om je fabriek te upgraden!");
     }

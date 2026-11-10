@@ -23,14 +23,21 @@
                 <p id="level-title" class="text-xs text-gray-400">Basis Chemie (H₂O)</p>
             </div>
 
-            <!-- Stats & Level Upgrade -->
-            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-800 mb-4">
-                <div class="text-xs text-gray-400 uppercase font-semibold">Saldo</div>
-                <div class="text-2xl font-black text-green-400 mb-2" id="money-display">€ 1.000</div>
+            <!-- Stats, Level Upgrade & Sell Factory -->
+            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-800 mb-4 space-y-2">
+                <div>
+                    <div class="text-xs text-gray-400 uppercase font-semibold">Saldo</div>
+                    <div class="text-2xl font-black text-green-400" id="money-display">€ 1.000</div>
+                </div>
                 
                 <button id="btn-upgrade-level" onclick="upgradeLevel()" class="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs rounded transition flex justify-between items-center shadow-lg">
                     <span>🚀 Herbouw Fabriek (Lvl <span id="next-level-num">2</span>)</span>
                     <span id="next-level-cost">€ 1.500</span>
+                </button>
+
+                <button id="btn-sell-factory" onclick="sellEntireFactory()" class="w-full py-1.5 px-3 bg-red-900/50 hover:bg-red-800/70 border border-red-700/60 text-red-200 font-bold text-xs rounded transition flex justify-between items-center">
+                    <span>🧹 Verkoop Fabriek (Grid Ontruimen)</span>
+                    <span class="text-[10px] bg-red-950 px-1.5 py-0.5 rounded text-red-300">100% Refund</span>
                 </button>
             </div>
 
@@ -55,9 +62,29 @@
 
             <!-- Footer / Controls Info -->
             <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 space-y-1">
-                <p>💡 <b>Tip:</b> Klik op een geplaatste Lopende Band om de richting te draaien (⬆️ ➡️ ⬇️ ⬅️).</p>
-                <p>⚙️ Mixers verwerken automatisch de meest waardevolle formules.</p>
+                <p>💡 <b>Tip:</b> Klik met de Muis 🖱️ op een Chemische Mixer om in te stellen wat hij maakt!</p>
+                <p>🔄 Klik op een Lopende Band om de richting te veranderen [R].</p>
             </div>
+        </div>
+    </div>
+
+    <!-- Modal voor Mixer Recept Selectie -->
+    <div id="mixer-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center hidden z-[1000]">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl p-5 w-96 max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center pb-3 border-b border-gray-800 mb-3">
+                <h3 class="font-bold text-lg text-amber-400 flex items-center gap-2">🧪 Mixer Recept Kiezen</h3>
+                <button onclick="closeMixerModal()" class="text-gray-400 hover:text-white text-xl font-bold px-2">&times;</button>
+            </div>
+            
+            <p class="text-xs text-gray-400 mb-3">Kies welke stof deze mixer moet produceren:</p>
+            
+            <div id="modal-recipe-options" class="flex-grow overflow-y-auto space-y-2 pr-1">
+                <!-- Injected by JS -->
+            </div>
+
+            <button onclick="closeMixerModal()" class="mt-4 w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-semibold text-xs transition">
+                Sluiten
+            </button>
         </div>
     </div>
 
