@@ -132,9 +132,10 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.5);
 }
 
-/* UI Sidebar */
+/* UI Sidebar - flex-shrink: 0 voorkomt dat de sidebar wordt ingedrukt */
 #ui-panel {
     width: 340px;
+    flex-shrink: 0;
     background-color: #181a1f;
     border-left: 2px solid #282c34;
     display: flex;
