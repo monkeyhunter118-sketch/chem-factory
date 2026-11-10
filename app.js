@@ -1,5 +1,4 @@
 const CELL_SIZE = 50;
-// Speelveld 3x groter gemaakt in breedte en hoogte
 let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE) * 3;
 let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE) * 3;
 const TICK_RATE = 1600; // ms per tick
@@ -12,6 +11,13 @@ let toolPrice = 0;
 let currentBuildDir = 1; // 0=Up, 1=Right, 2=Down, 3=Left
 let activeMixerKey = null;
 
+// Blauwdruk State
+let savedBlueprint = null; // Array van items relative to top-left
+let blueprintCost = 0;
+let blueprintStep = 0; // 0=Geen, 1=Wacht op start, 2=Wacht op einde
+let bpStartX = null;
+let bpStartY = null;
+
 // Level config
 const LEVEL_CONFIG = {
     1: { title: "Basiselementen (H₂O, H₂O₂)", costNext: 1500 },
@@ -23,18 +29,15 @@ const LEVEL_CONFIG = {
 
 // Chemical Recipes
 const RECIPES = [
-    // Level 1
     { id: 'H2O', name: 'Water', formula: 'H₂O', req: { 'H': 2, 'O': 1 }, value: 60, lvl: 1, color: '#38ada9' },
     { id: 'H2O2', name: 'Waterstofperoxide', formula: 'H₂O₂', req: { 'H': 2, 'O': 2 }, value: 120, lvl: 1, color: '#74b9ff' },
     
-    // Level 2
     { id: 'CO', name: 'Koolmonoxide', formula: 'CO', req: { 'C': 1, 'O': 1 }, value: 90, lvl: 2, color: '#b2bec3' },
     { id: 'CO2', name: 'Koolstofdioxide', formula: 'CO₂', req: { 'C': 1, 'O': 2 }, value: 150, lvl: 2, color: '#78e08f' },
     { id: 'NH3', name: 'Ammoniak', formula: 'NH₃', req: { 'N': 1, 'H': 3 }, value: 220, lvl: 2, color: '#f6b93b' },
     { id: 'CH4', name: 'Methaan', formula: 'CH₄', req: { 'C': 1, 'H': 4 }, value: 350, lvl: 2, color: '#e67e22' },
     { id: 'H2CO3', name: 'Koolzuur', formula: 'H₂CO₃', req: { 'H': 2, 'C': 1, 'O': 3 }, value: 480, lvl: 2, color: '#a29bfe' },
 
-    // Level 3
     { id: 'HCl', name: 'Zoutzuur', formula: 'HCl', req: { 'H': 1, 'Cl': 1 }, value: 180, lvl: 3, color: '#e55039' },
     { id: 'SO2', name: 'Zwaveldioxide', formula: 'SO₂', req: { 'S': 1, 'O': 2 }, value: 280, lvl: 3, color: '#4a69bd' },
     { id: 'NO2', name: 'Stikstofdioxide', formula: 'NO₂', req: { 'N': 1, 'O': 2 }, value: 320, lvl: 3, color: '#fd79a8' },
@@ -42,14 +45,12 @@ const RECIPES = [
     { id: 'HNO3', name: 'Salpeterzuur', formula: 'HNO₃', req: { 'H': 1, 'N': 1, 'O': 3 }, value: 1200, lvl: 3, color: '#ff7675' },
     { id: 'H2SO4', name: 'Zwavelzuur', formula: 'H₂SO₄', req: { 'H': 2, 'S': 1, 'O': 4 }, value: 1500, lvl: 3, color: '#b8e994' },
 
-    // Level 4
     { id: 'C2H6O', name: 'Ethanol', formula: 'C₂H₆O', req: { 'C': 2, 'H': 6, 'O': 1 }, value: 2400, lvl: 4, color: '#fdcb6e' },
     { id: 'C2H4O2', name: 'Azijnzuur', formula: 'C₂H₄O₂', req: { 'C': 2, 'H': 4, 'O': 2 }, value: 3100, lvl: 4, color: '#e17055' },
     { id: 'CHCl3', name: 'Chloroform', formula: 'CHCl₃', req: { 'C': 1, 'H': 1, 'Cl': 3 }, value: 5200, lvl: 4, color: '#00cec9' },
     { id: 'CH4N2O', name: 'Ureum', formula: 'CH₄N₂O', req: { 'C': 1, 'H': 4, 'N': 2, 'O': 1 }, value: 6800, lvl: 4, color: '#6c5ce7' },
     { id: 'C6H12O6', name: 'Glucose', formula: 'C₆H₁₂O₆', req: { 'C': 6, 'H': 12, 'O': 6 }, value: 8500, lvl: 4, color: '#f8c291' },
 
-    // Level 5
     { id: 'C3H5N3O9', name: 'Nitroglycerine', formula: 'C₃H₅N₃O₉', req: { 'C': 3, 'H': 5, 'N': 3, 'O': 9 }, value: 18500, lvl: 5, color: '#d63031' },
     { id: 'C7H5N3O6', name: 'TNT', formula: 'C₇H₅N₃O₆', req: { 'C': 7, 'H': 5, 'N': 3, 'O': 6 }, value: 35000, lvl: 5, color: '#ff4757' }
 ];
@@ -63,10 +64,11 @@ const ELEMENT_COLORS = {
     'H': '#48dbfb', 'C': '#ffffff', 'N': '#a55eea', 'O': '#ff6b6b', 'S': '#fecb57', 'Cl': '#1dd1a1'
 };
 
-// Available Buildings Definition (Inclusief Bocht Links en Bocht Rechts)
+// Available Buildings Definition
 const BUILDINGS = [
     { id: 'cursor', name: '🖱️ Muis (Deselecteren / Instellen)', price: 0, lvl: 1 },
     { id: 'rotate', name: '🔄 Bouwrichting [Sneltoets: R]', price: 0, lvl: 1 },
+    { id: 'blueprint', name: '📋 Blauwdruk Maken / Plaatsen', price: 0, lvl: 1 },
     { id: 'conveyor', name: 'Lopende Band', price: 10, lvl: 1 },
     { id: 'conveyor-curve', name: 'Bocht Rechts ↪️', price: 15, lvl: 1 },
     { id: 'conveyor-curve-left', name: 'Bocht Links ↩️', price: 15, lvl: 1 },
@@ -98,7 +100,6 @@ const gridContainer = document.getElementById('grid-container');
 
 function initGrid() {
     gridContainer.innerHTML = '';
-    // Stel de expliciete grotere breedte/hoogte in op de container
     gridContainer.style.width = `${GRID_WIDTH * CELL_SIZE}px`;
     gridContainer.style.height = `${GRID_HEIGHT * CELL_SIZE}px`;
 
@@ -106,6 +107,7 @@ function initGrid() {
         for(let y = 0; y < GRID_HEIGHT; y++) {
             const cell = document.createElement('div');
             cell.className = 'grid-cell';
+            cell.id = `cell-${x}-${y}`;
             cell.style.left = `${x * CELL_SIZE}px`;
             cell.style.top = `${y * CELL_SIZE}px`;
             cell.onclick = (e) => {
@@ -114,6 +116,26 @@ function initGrid() {
             };
             gridContainer.appendChild(cell);
         }
+    }
+}
+
+// SWITCH TABBLADEN
+function switchTab(tabName) {
+    const buildTabBtn = document.getElementById('tab-btn-build');
+    const recipesTabBtn = document.getElementById('tab-btn-recipes');
+    const buildContent = document.getElementById('tab-content-build');
+    const recipesContent = document.getElementById('tab-content-recipes');
+
+    if (tabName === 'build') {
+        buildTabBtn.className = 'tab-btn active flex-1 py-1.5 text-xs font-bold rounded text-amber-400 bg-gray-800 border border-gray-700 transition';
+        recipesTabBtn.className = 'tab-btn flex-1 py-1.5 text-xs font-bold rounded text-gray-400 hover:text-gray-200 transition';
+        buildContent.classList.remove('hidden');
+        recipesContent.classList.add('hidden');
+    } else {
+        recipesTabBtn.className = 'tab-btn active flex-1 py-1.5 text-xs font-bold rounded text-amber-400 bg-gray-800 border border-gray-700 transition';
+        buildTabBtn.className = 'tab-btn flex-1 py-1.5 text-xs font-bold rounded text-gray-400 hover:text-gray-200 transition';
+        recipesContent.classList.remove('hidden');
+        buildContent.classList.add('hidden');
     }
 }
 
@@ -142,7 +164,9 @@ function updateUI() {
     BUILDINGS.filter(b => b.lvl <= playerLevel).forEach(b => {
         const btn = document.createElement('button');
         
-        const isSelected = selectedTool === b.id;
+        let isSelected = selectedTool === b.id;
+        if (b.id === 'blueprint' && selectedTool === 'blueprint_place') isSelected = true;
+
         btn.className = `btn-build w-full ${isSelected ? 'selected' : ''}`;
         btn.onclick = () => selectTool(b.id, b.price);
         
@@ -152,12 +176,30 @@ function updateUI() {
         if (b.id === 'conveyor-curve-left') displayName = `${CURVE_LEFT_ARROWS[currentBuildDir]} ${b.name}`;
         if (b.id === 'rotate') displayName = `🔄 Richting (${DIR_ARROWS[currentBuildDir]}) [R]`;
 
+        if (b.id === 'blueprint') {
+            if (savedBlueprint) {
+                displayName = `📋 Plaats Blauwdruk (€${blueprintCost.toLocaleString('nl-NL')})`;
+            } else {
+                displayName = `📋 Blauwdruk Maken`;
+            }
+        }
+
         btn.innerHTML = `
             <span>${displayName}</span>
             <span class="text-xs ${b.price === 0 ? 'text-red-400' : 'text-gray-400'}">${b.price > 0 ? '€' + b.price : ''}</span>
         `;
         btnContainer.appendChild(btn);
     });
+
+    // Update blauwdruk status card
+    const bpCard = document.getElementById('blueprint-status-card');
+    const bpText = document.getElementById('blueprint-status-text');
+    if (savedBlueprint) {
+        bpCard.classList.remove('hidden');
+        bpText.innerText = `Opgeslagen: ${savedBlueprint.length} gebouwen. Totale prijs: €${blueprintCost.toLocaleString('nl-NL')}. Klik op het grid om te plaatsen.`;
+    } else {
+        bpCard.classList.add('hidden');
+    }
 
     const recipeContainer = document.getElementById('recipe-list');
     recipeContainer.innerHTML = '';
@@ -185,6 +227,21 @@ function selectTool(toolId, price) {
         updateUI();
         return;
     }
+
+    // Blauwdruk logica: als er al een blauwdruk is opgeslagen en je drukt nogmaals op de knop -> Meteen plaatsen!
+    if (toolId === 'blueprint') {
+        if (savedBlueprint) {
+            selectedTool = 'blueprint_place';
+            updateUI();
+            return;
+        } else {
+            selectedTool = 'blueprint_create';
+            blueprintStep = 1;
+            updateUI();
+            return;
+        }
+    }
+
     selectedTool = toolId;
     toolPrice = price;
 
@@ -195,6 +252,111 @@ function selectTool(toolId, price) {
 
 function handleGridClick(x, y) {
     const key = `${x},${y}`;
+
+    // --- BLAUWDRUK MAKEN MODUS ---
+    if (selectedTool === 'blueprint_create') {
+        if (blueprintStep === 1) {
+            bpStartX = x;
+            bpStartY = y;
+            blueprintStep = 2;
+            
+            // Visual highlight
+            const startEl = document.getElementById(`cell-${x}-${y}`);
+            if (startEl) startEl.classList.add('grid-cell-bp-start');
+
+            showFloatingText(key, "Hoek 1 gekozen! Klik nu op 2e hoek", "#60a5fa");
+            return;
+        } else if (blueprintStep === 2) {
+            const minX = Math.min(bpStartX, x);
+            const maxX = Math.max(bpStartX, x);
+            const minY = Math.min(bpStartY, y);
+            const maxY = Math.max(bpStartY, y);
+
+            // Verwijder visual highlights
+            const startEl = document.getElementById(`cell-${bpStartX}-${bpStartY}`);
+            if (startEl) startEl.classList.remove('grid-cell-bp-start');
+
+            savedBlueprint = [];
+            let totalBpCost = 0;
+
+            for (let bx = minX; bx <= maxX; bx++) {
+                for (let by = minY; by <= maxY; by++) {
+                    const bKey = `${bx},${by}`;
+                    if (grid[bKey]) {
+                        const bDef = BUILDINGS.find(b => b.id === grid[bKey].type);
+                        totalBpCost += bDef ? bDef.price : 0;
+
+                        savedBlueprint.push({
+                            relX: bx - minX,
+                            relY: by - minY,
+                            type: grid[bKey].type,
+                            dir: grid[bKey].dir,
+                            selectedRecipe: grid[bKey].selectedRecipe || 'AUTO'
+                        });
+                    }
+                }
+            }
+
+            if (savedBlueprint.length === 0) {
+                showFloatingText(key, "Geen gebouwen gekozen!", "#ff6b6b");
+                savedBlueprint = null;
+                blueprintStep = 1;
+            } else {
+                blueprintCost = totalBpCost;
+                blueprintStep = 0;
+                selectedTool = 'blueprint_place'; // Direct overschakelen naar plaatsmodus!
+                showFloatingText(key, `📋 Blauwdruk Opgeslagen! (${savedBlueprint.length} gebouwen)`, "#20bf6b");
+            }
+
+            updateUI();
+            return;
+        }
+    }
+
+    // --- BLAUWDRUK PLAATSEN MODUS ---
+    if (selectedTool === 'blueprint_place') {
+        if (!savedBlueprint || savedBlueprint.length === 0) return;
+
+        // Check of speler genoeg geld heeft
+        if (money < blueprintCost) {
+            showFloatingText(key, `Niet genoeg geld! (€${blueprintCost.toLocaleString('nl-NL')} nodig)`, "#ff6b6b");
+            return;
+        }
+
+        // Check max 3 inleverpunten regel
+        const bpInleverpunten = savedBlueprint.filter(b => b.type === 'inleverpunt').length;
+        const currentInleverpunten = Object.values(grid).filter(cell => cell.type === 'inleverpunt').length;
+        if (currentInleverpunten + bpInleverpunten > 3) {
+            showFloatingText(key, "Max 3 Inleverpunten overschreden!", "#ff6b6b");
+            return;
+        }
+
+        money -= blueprintCost;
+
+        // Bouw alle elementen uit de blauwdruk relatief t.o.v. de gekozen cel
+        savedBlueprint.forEach(item => {
+            const tx = x + item.relX;
+            const ty = y + item.relY;
+            const tKey = `${tx},${ty}`;
+
+            if (tx >= 0 && tx < GRID_WIDTH && ty >= 0 && ty < GRID_HEIGHT) {
+                // Verwijder eventueel aanwezig gebouw op die plek
+                if (grid[tKey]) {
+                    if (grid[tKey].obj && grid[tKey].obj.parentNode) {
+                        grid[tKey].obj.parentNode.removeChild(grid[tKey].obj);
+                    }
+                    delete grid[tKey];
+                }
+
+                // Plaats gebouw uit blauwdruk
+                buildEntityWithDirAndRecipe(tx, ty, item.type, item.dir, item.selectedRecipe);
+            }
+        });
+
+        updateUI();
+        showFloatingText(key, "📋 Blauwdruk Geplaatst!", "#20bf6b");
+        return;
+    }
 
     // DELETE MODUS
     if (selectedTool === 'delete') {
@@ -294,9 +456,14 @@ function handleGridClick(x, y) {
 }
 
 function buildEntity(x, y, type) {
+    buildEntityWithDirAndRecipe(x, y, type, currentBuildDir, 'AUTO');
+}
+
+function buildEntityWithDirAndRecipe(x, y, type, dir, recipe = 'AUTO') {
     const key = `${x},${y}`;
     const el = document.createElement('div');
     el.className = `grid-cell ${type}`;
+    el.id = `cell-${x}-${y}`;
     el.style.left = `${x * CELL_SIZE}px`;
     el.style.top = `${y * CELL_SIZE}px`;
     
@@ -304,8 +471,6 @@ function buildEntity(x, y, type) {
         e.stopPropagation();
         handleGridClick(x, y);
     };
-
-    let dir = currentBuildDir;
 
     if (type === 'conveyor') {
         el.innerText = DIR_ARROWS[dir];
@@ -320,7 +485,10 @@ function buildEntity(x, y, type) {
         const elem = type.replace('source-', '').toUpperCase();
         el.innerText = elem;
     } else if (type === 'mixer') {
-        el.innerHTML = `🧪<span class="mixer-label" id="label-${x}-${y}">AUTO</span>`;
+        const rec = RECIPES.find(r => r.id === recipe);
+        const labelText = recipe === 'AUTO' ? 'AUTO' : (rec ? rec.formula : recipe);
+        const labelColor = recipe === 'AUTO' ? '#88eaab' : (rec ? rec.color : '#ffffff');
+        el.innerHTML = `🧪<span class="mixer-label" id="label-${x}-${y}" style="color: ${labelColor}">${labelText}</span>`;
     } else if (type === 'inleverpunt') {
         el.innerText = '🏢';
     }
@@ -330,9 +498,17 @@ function buildEntity(x, y, type) {
         dir, 
         obj: el, 
         inventory: {},
-        selectedRecipe: 'AUTO'
+        selectedRecipe: recipe
     };
     gridContainer.appendChild(el);
+}
+
+function resetBlueprint() {
+    savedBlueprint = null;
+    blueprintCost = 0;
+    blueprintStep = 0;
+    selectedTool = 'cursor';
+    updateUI();
 }
 
 // MIXER RECEPT SELECTIE MODAL
@@ -429,7 +605,6 @@ function spawnItem(type, x, y) {
     });
 }
 
-// Berekent positie met lichte verschuiving (slot) voor maximaal 3 items op één cel
 function updateVisualPosition(element, x, y, slot = 0) {
     const offsets = [
         { dx: 14, dy: 14 },
@@ -484,7 +659,6 @@ function gameTick() {
                     if (nextCell && (nextCell.type.startsWith('conveyor') || nextCell.type === 'mixer' || nextCell.type === 'inleverpunt')) {
                         
                         const itemsOnNextCell = items.filter(i => i.x === nextX && i.y === nextY);
-                        // Lopende banden kunnen tot 3 items vasthouden
                         const maxCap = nextCell.type.startsWith('conveyor') ? 3 : 1;
                         
                         if (itemsOnNextCell.length < maxCap) {
@@ -515,7 +689,6 @@ function gameTick() {
         }
     });
 
-    // VERWERK MIXERS
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type === 'mixer') {
@@ -677,4 +850,17 @@ function showFloatingText(key, text, color) {
 }
 
 // SNELTOETSEN (R = Draaien, X = Delete)
-document.addEventListener
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() === 'r') {
+        selectTool('rotate', 0);
+    }
+    if (e.key.toLowerCase() === 'x') {
+        selectTool('delete', 0);
+    }
+});
+
+gridContainer.addEventListener('contextmenu', (e) => e.preventDefault());
+
+initGrid();
+updateUI();
+setInterval(gameTick, TICK_RATE);

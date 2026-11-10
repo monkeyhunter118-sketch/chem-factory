@@ -22,7 +22,7 @@ body {
     background-color: #1a1c23;
     background-image: radial-gradient(circle, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
     background-size: 50px 50px;
-    overflow: auto; /* Zorgt voor scrollen op het 3x grotere speelveld */
+    overflow: auto;
 }
 
 /* Grid Cells */
@@ -44,6 +44,12 @@ body {
 .grid-cell:hover {
     background-color: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Blauwdruk markering */
+.grid-cell-bp-start {
+    border: 2px dashed #60a5fa !important;
+    background-color: rgba(96, 165, 250, 0.25) !important;
 }
 
 /* Entity Visual Classes */
@@ -137,6 +143,13 @@ body {
     flex-direction: column;
     box-shadow: -4px 0 15px rgba(0,0,0,0.5);
     z-index: 100;
+}
+
+/* Tabs Styling */
+.tab-btn.active {
+    background-color: #1f2937;
+    color: #fbbf24;
+    border-color: #374151;
 }
 
 .btn-build {

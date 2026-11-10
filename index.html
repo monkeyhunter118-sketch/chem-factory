@@ -24,7 +24,7 @@
             </div>
 
             <!-- Stats, Level Upgrade & Sell Factory -->
-            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-800 mb-4 space-y-2">
+            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-800 mb-3 space-y-2">
                 <div>
                     <div class="text-xs text-gray-400 uppercase font-semibold">Saldo</div>
                     <div class="text-2xl font-black text-green-400" id="money-display">€ 1.000</div>
@@ -41,19 +41,37 @@
                 </button>
             </div>
 
-            <!-- Scrollable Construction & Recipe Tabs -->
+            <!-- TABBLAD NAVIGATIE -->
+            <div class="flex border-b border-gray-700 mb-3 bg-gray-900/50 rounded-t p-1 gap-1">
+                <button id="tab-btn-build" onclick="switchTab('build')" class="tab-btn active flex-1 py-1.5 text-xs font-bold rounded text-amber-400 bg-gray-800 border border-gray-700 transition">
+                    🔨 Gebouwen & Bronnen
+                </button>
+                <button id="tab-btn-recipes" onclick="switchTab('recipes')" class="tab-btn flex-1 py-1.5 text-xs font-bold rounded text-gray-400 hover:text-gray-200 transition">
+                    🧪 Recepten & Waarde
+                </button>
+            </div>
+
+            <!-- TAB INHOUD -->
             <div class="flex-grow overflow-y-auto space-y-4 pr-1">
-                <!-- Construction Section -->
-                <div>
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">🔨 Gebouwen & Bronnen</h2>
+                <!-- TAB 1: GEBOUWEN & BRONNEN -->
+                <div id="tab-content-build" class="space-y-3">
+                    <!-- Blauwdruk status card -->
+                    <div id="blueprint-status-card" class="bg-blue-950/40 border border-blue-800/60 p-2.5 rounded-lg text-xs hidden">
+                        <div class="flex justify-between items-center font-bold text-blue-300 mb-1">
+                            <span>📋 Blauwdruk Actief</span>
+                            <button onclick="resetBlueprint()" class="text-[10px] text-red-400 hover:underline">Wissen</button>
+                        </div>
+                        <p id="blueprint-status-text" class="text-[11px] text-gray-300">Gebouwen bewaard. Klik op het grid om te plaatsen.</p>
+                    </div>
+
                     <div class="space-y-1.5" id="build-buttons">
                         <!-- Buttons injected dynamically by JS -->
                     </div>
                 </div>
 
-                <!-- Recipe Book -->
-                <div>
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">🧪 Recepten & Waarde</h2>
+                <!-- TAB 2: RECEPTEN & WAARDE -->
+                <div id="tab-content-recipes" class="space-y-2 hidden">
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">🧪 Receptenboek</h2>
                     <div class="space-y-1.5" id="recipe-list">
                         <!-- Recipes injected dynamically by JS -->
                     </div>
@@ -63,8 +81,7 @@
             <!-- Footer / Controls Info -->
             <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 space-y-1">
                 <p>💡 <b>Sneltoetsen:</b> [R] Draaien | [X] Verwijderen 🗑️</p>
-                <p>📦 Lopende banden kunnen maximaal <b>3 items</b> dragen.</p>
-                <p>🏢 Maximaal <b>3 Inleverpunten</b> toegestaan.</p>
+                <p>📋 <b>Blauwdruk:</b> Selecteer 2 hoekpunten ➔ Klik nogmaals om direct te plaatsen!</p>
             </div>
         </div>
     </div>
