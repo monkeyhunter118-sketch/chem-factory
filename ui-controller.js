@@ -1,27 +1,3 @@
-let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE) * 3;
-let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE) * 3;
-
-// Game State
-let money = 1000;
-let playerLevel = 1;
-let selectedTool = 'cursor';
-let toolPrice = 0;
-let currentBuildDir = 1;
-let activeMixerKey = null;
-let currentTab = 'build';
-let tickCounter = 0;
-
-// Blauwdruk State
-let savedBlueprint = null;
-let blueprintCost = 0;
-let blueprintStep = 0;
-let bpStartX = null;
-let bpStartY = null;
-
-const grid = {}; 
-let items = []; 
-let itemIdCounter = 0;
-
 const gridContainer = document.getElementById('grid-container');
 
 function initGrid() {
@@ -89,7 +65,6 @@ function updateUI() {
     
     BUILDINGS.filter(b => b.lvl <= playerLevel).forEach(b => {
         const btn = document.createElement('button');
-        
         let isSelected = selectedTool === b.id;
         if (b.id === 'blueprint' && selectedTool === 'blueprint_place') isSelected = true;
 
@@ -107,7 +82,6 @@ function updateUI() {
             displayName = `${elName} ${DIR_ARROWS[currentBuildDir]}`;
         }
         if (b.id === 'rotate') displayName = `🔄 Richting (${DIR_ARROWS[currentBuildDir]}) [R]`;
-
         if (b.id === 'blueprint') {
             displayName = savedBlueprint ? `📋 Plaats Blauwdruk (€${blueprintCost.toLocaleString('nl-NL')})` : `📋 Blauwdruk Maken`;
         }
@@ -134,23 +108,18 @@ function updateUI() {
     RECIPES.forEach(r => {
         const unlocked = r.lvl <= playerLevel;
         const reqStr = Object.entries(r.req).map(([el, cnt]) => `${cnt}x ${el}`).join(', ');
-        
         const priceDiff = r.currentValue - r.baseValue;
-        let trendIcon = '➡️';
-        let trendColor = 'text-gray-400';
+        let trendIcon = '➡️', trendColor = 'text-gray-400';
         if (priceDiff > 0) { trendIcon = '📈'; trendColor = 'text-green-400'; }
         if (priceDiff < 0) { trendIcon = '📉'; trendColor = 'text-red-400'; }
 
         const card = document.createElement('div');
         card.className = `p-2.5 rounded border text-xs flex justify-between items-center transition cursor-pointer ${unlocked ? 'bg-gray-800/80 border-gray-700 hover:border-gray-500' : 'bg-gray-900/30 border-gray-800 opacity-40'}`;
         card.onclick = () => {
-            if (unlocked) {
-                alert(`🧪 ${r.name} (${r.formula})\nActuele Marktwaarde: €${r.currentValue}\nBasisprijs: €${r.baseValue} | Minimumprijs: €${r.minPrice}\nBereidingstijd: ${(r.craftTicks * (TICK_RATE/1000)).toFixed(1)}s (${r.craftTicks} ticks)\nNodig: ${reqStr}`);
-            }
+            if (unlocked) alert(`🧪 ${r.name} (${r.formula})\nActuele Marktwaarde: €${r.currentValue}\nBasisprijs: €${r.baseValue} | Minimumprijs: €${r.minPrice}\nBereidingstijd: ${(r.craftTicks * (TICK_RATE/1000)).toFixed(1)}s (${r.craftTicks} ticks)\nNodig: ${reqStr}`);
         };
 
         const icon = ITEM_ICONS[r.id] || '🧪';
-
         card.innerHTML = `
             <div>
                 <div class="font-bold flex items-center gap-1.5" style="color: ${unlocked ? r.color : '#888'}">
@@ -179,21 +148,12 @@ function selectTool(toolId, price) {
     }
 
     if (toolId === 'blueprint') {
-        if (savedBlueprint) {
-            selectedTool = 'blueprint_place';
-            updateUI();
-            return;
-        } else {
-            selectedTool = 'blueprint_create';
-            blueprintStep = 1;
-            updateUI();
-            return;
-        }
+        if (savedBlueprint) { selectedTool = 'blueprint_place'; updateUI(); return; } 
+        else { selectedTool = 'blueprint_create'; blueprintStep = 1; updateUI(); return; }
     }
 
     selectedTool = toolId;
     toolPrice = price;
-
     gridContainer.style.cursor = selectedTool === 'delete' ? 'not-allowed' : 'default';
     updateUI();
 }
@@ -209,8 +169,8 @@ function handleGridClick(x, y) {
             showFloatingText(key, "Hoek 1 gekozen! Klik nu op 2e hoek", "#60a5fa");
             return;
         } else if (blueprintStep === 2) {
-            const minX = Math.min(bpStartX, x); maxX = Math.max(bpStartX, x);
-            const minY = Math.min(bpStartY, y); maxY = Math.max(bpStartY, y);
+            const minX = Math.min(bpStartX, x), maxX = Math.max(bpStartX, x);
+            const minY = Math.min(bpStartY, y), maxY = Math.max(bpStartY, y);
 
             const startEl = document.getElementById(`cell-${bpStartX}-${bpStartY}`);
             if (startEl) startEl.classList.remove('grid-cell-bp-start');
@@ -224,7 +184,6 @@ function handleGridClick(x, y) {
                     if (grid[bKey]) {
                         const bDef = BUILDINGS.find(b => b.id === grid[bKey].type);
                         totalBpCost += bDef ? bDef.price : 0;
-
                         savedBlueprint.push({
                             relX: bx - minX, relY: by - minY,
                             type: grid[bKey].type, dir: grid[bKey].dir,
@@ -262,7 +221,6 @@ function handleGridClick(x, y) {
         }
 
         money -= blueprintCost;
-
         savedBlueprint.forEach(item => {
             const tx = x + item.relX; ty = y + item.relY;
             const tKey = `${tx},${ty}`;
@@ -316,7 +274,6 @@ function handleGridClick(x, y) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
             grid[key].dir = (grid[key].dir + 1) % 4;
             grid[key].obj.classList.add(`dir-${grid[key].dir}`);
-
             updateEntityText(grid[key]);
             return;
         }
@@ -334,10 +291,7 @@ function handleGridClick(x, y) {
 
     if (grid[key]) {
         if (grid[key].type === selectedTool) return;
-        if (money < toolPrice) {
-            showFloatingText(key, "Niet genoeg geld!", "#ff6b6b");
-            return;
-        }
+        if (money < toolPrice) { showFloatingText(key, "Niet genoeg geld!", "#ff6b6b"); return; }
 
         const buildingDef = BUILDINGS.find(b => b.id === grid[key].type);
         if (buildingDef && buildingDef.price > 0) money += Math.floor(buildingDef.price * 0.8);
@@ -352,15 +306,11 @@ function handleGridClick(x, y) {
             if (idx > -1) items.splice(idx, 1);
         });
     } else {
-        if (money < toolPrice) {
-            showFloatingText(key, "Niet genoeg geld!", "#ff6b6b");
-            return;
-        }
+        if (money < toolPrice) { showFloatingText(key, "Niet genoeg geld!", "#ff6b6b"); return; }
     }
 
     money -= toolPrice;
     updateUI();
-
     buildEntity(x, y, selectedTool);
 }
 
@@ -369,9 +319,7 @@ function buildEntity(x, y, type) {
 }
 
 function updateEntityText(entity) {
-    const dir = entity.dir;
-    const type = entity.type;
-
+    const dir = entity.dir, type = entity.type;
     if (type === 'conveyor') entity.obj.innerText = DIR_ARROWS[dir];
     else if (type === 'conveyor-curve') entity.obj.innerText = CURVE_RIGHT_ARROWS[dir];
     else if (type === 'conveyor-curve-left') entity.obj.innerText = CURVE_LEFT_ARROWS[dir];
@@ -401,22 +349,14 @@ function buildEntityWithDirAndRecipe(x, y, type, dir, recipe = 'AUTO') {
     const speedMult = buildingDef && buildingDef.speed ? buildingDef.speed : 1.0;
 
     grid[key] = { 
-        type, 
-        dir, 
-        obj: el, 
-        inventory: {},
-        selectedRecipe: recipe,
-        splitToggle: 0,
-        lastSpawnTime: 0,
-        craftingState: null,
-        speedMultiplier: speedMult
+        type, dir, obj: el, inventory: {}, selectedRecipe: recipe,
+        splitToggle: 0, lastSpawnTime: 0, craftingState: null, speedMultiplier: speedMult
     };
 
     el.classList.add(`dir-${dir}`);
     if (type.startsWith('mixer')) {
         el.classList.add('mixer-base');
-        let tierClass = 'mixer-mk1';
-        let tierLabel = 'Mk1';
+        let tierClass = 'mixer-mk1', tierLabel = 'Mk1';
         if (type === 'mixer-mk2') { tierClass = 'mixer-mk2'; tierLabel = 'Mk2'; }
         if (type === 'mixer-mk3') { tierClass = 'mixer-mk3'; tierLabel = 'Mk3'; }
         el.classList.add(tierClass);
@@ -516,315 +456,6 @@ function closeMixerModal() {
     activeMixerKey = null;
 }
 
-function spawnItem(type, x, y) {
-    const id = itemIdCounter++;
-    const el = document.createElement('div');
-    el.className = 'item';
-    
-    const icon = ITEM_ICONS[type] || '🧪';
-    const color = ELEMENT_COLORS[type] || RECIPES.find(r => r.id === type)?.color || '#20bf6b';
-    el.style.backgroundColor = color;
-
-    el.innerHTML = `<span class="item-icon">${icon}</span><span class="item-text">${type}</span>`;
-
-    const itemObj = { id, type, x, y, visual: el, movedThisTick: false, lastDir: 1 };
-    items.push(itemObj);
-
-    updateVisualPosition(itemObj, 0);
-    gridContainer.appendChild(el);
-}
-
-function updateVisualPosition(item, slotIndex = 0) {
-    const cell = grid[`${item.x},${item.y}`];
-    let dir = item.lastDir !== undefined ? item.lastDir : 1;
-    if (cell && cell.dir !== undefined) dir = cell.dir;
-
-    const dirVec = DIRS[dir];
-    const slotOffset = (1 - slotIndex) * 11;
-    const centerX = (item.x * CELL_SIZE) + 13;
-    const centerY = (item.y * CELL_SIZE) + 13;
-
-    const posX = centerX + (dirVec.dx * slotOffset);
-    const posY = centerY + (dirVec.dy * slotOffset);
-
-    item.visual.style.left = `${posX}px`;
-    item.visual.style.top = `${posY}px`;
-}
-
-function triggerAnimation(entityObj, classCss) {
-    if (!entityObj || !entityObj.obj) return;
-    entityObj.obj.classList.remove(classCss);
-    void entityObj.obj.offsetWidth;
-    entityObj.obj.classList.add(classCss);
-    setTimeout(() => entityObj.obj.classList.remove(classCss), 350);
-}
-
-function processItemSale(itemType) {
-    let value = ELEMENT_VALUES[itemType] || 0;
-    const recipe = RECIPES.find(r => r.id === itemType);
-
-    if (recipe) {
-        value = recipe.currentValue;
-        recipe.currentValue = Math.max(recipe.minPrice, Math.floor(recipe.currentValue * 0.95));
-    }
-
-    money += value;
-    updateUI();
-    return value;
-}
-
-function updateDynamicMarketPrices() {
-    RECIPES.forEach(recipe => {
-        if (recipe.lvl <= playerLevel) {
-            const maxPrice = Math.floor(recipe.baseValue * 2.0);
-            if (recipe.currentValue < maxPrice) {
-                recipe.currentValue = Math.min(maxPrice, Math.floor(recipe.currentValue * 1.03) + 1);
-            }
-        }
-    });
-    updateUI();
-}
-
-function gameTick() {
-    tickCounter++;
-    const now = Date.now();
-
-    if (tickCounter % 8 === 0) {
-        updateDynamicMarketPrices();
-    }
-
-    // 1. BRON PRODUCTIE MET 2 SECONDEN COOLDOWN
-    for (const key in grid) {
-        const entity = grid[key];
-        if (entity.type.startsWith('source-')) {
-            if (now - entity.lastSpawnTime >= 2000) {
-                const [x, y] = key.split(',').map(Number);
-                const elemType = entity.type.replace('source-', '').toUpperCase();
-                
-                const cellItems = items.filter(i => i.x === x && i.y === y);
-                if (cellItems.length < 3) {
-                    spawnItem(elemType, x, y);
-                    entity.lastSpawnTime = now;
-                    triggerAnimation(entity, 'anim-push');
-                }
-            }
-        }
-    }
-
-    items.forEach(i => i.movedThisTick = false);
-    const itemsToRemove = [];
-
-    // 2. ITEMS TRANSPORTEREN OVER HET GRID
-    items.forEach(item => {
-        if (item.movedThisTick) return;
-
-        const currentKey = `${item.x},${item.y}`;
-        const currentCell = grid[currentKey];
-
-        if (currentCell) {
-            let moveDirs = [];
-            
-            if (currentCell.type.startsWith('source-')) {
-                moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type.startsWith('conveyor')) {
-                moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type === 'splitter') {
-                const mainDir = currentCell.dir;
-                const outDir = (currentCell.splitToggle === 0) ? (mainDir + 3) % 4 : (mainDir + 1) % 4;
-                moveDirs = [ DIRS[outDir] ];
-            }
-
-            for (const dirVec of moveDirs) {
-                const nextX = item.x + dirVec.dx;
-                const nextY = item.y + dirVec.dy;
-                const nextKey = `${nextX},${nextY}`;
-                const nextCell = grid[nextKey];
-
-                if (nextX >= 0 && nextX < GRID_WIDTH && nextY >= 0 && nextY < GRID_HEIGHT) {
-                    if (nextCell && (nextCell.type.startsWith('conveyor') || nextCell.type === 'splitter' || nextCell.type.startsWith('mixer') || nextCell.type === 'inleverpunt')) {
-                        
-                        const itemsOnNextCell = items.filter(i => i.x === nextX && i.y === nextY);
-                        const maxCap = (nextCell.type.startsWith('conveyor') || nextCell.type === 'splitter') ? 3 : 1;
-                        
-                        if (itemsOnNextCell.length < maxCap) {
-                            item.x = nextX;
-                            item.y = nextY;
-                            item.lastDir = DIRS.findIndex(d => d.dx === dirVec.dx && d.dy === dirVec.dy);
-                            item.movedThisTick = true;
-
-                            if (currentCell.type === 'splitter') {
-                                currentCell.splitToggle = 1 - currentCell.splitToggle;
-                            }
-
-                            updateVisualPosition(item, itemsOnNextCell.length);
-
-                            if (nextCell.type.startsWith('mixer')) {
-                                nextCell.inventory[item.type] = (nextCell.inventory[item.type] || 0) + 1;
-                                triggerAnimation(nextCell, 'anim-mix');
-                                itemsToRemove.push(item);
-                            } else if (nextCell.type === 'inleverpunt') {
-                                const saleValue = processItemSale(item.type);
-                                triggerAnimation(nextCell, 'anim-sell');
-                                showFloatingText(nextKey, `+€${saleValue.toLocaleString('nl-NL')}`, "#20bf6b");
-                                itemsToRemove.push(item);
-                            }
-                            
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    });
-
-    for (const key in grid) {
-        const cellItems = items.filter(i => `${i.x},${i.y}` === key);
-        cellItems.forEach((item, slotIndex) => {
-            updateVisualPosition(item, slotIndex);
-        });
-    }
-
-    // 3. MIXERS (INCLUSIEF TIER SNELHEIDSVERMENIGVULDIGER)
-    for (const key in grid) {
-        const entity = grid[key];
-        if (entity.type.startsWith('mixer')) {
-            const [mx, my] = key.split(',').map(Number);
-            const pbar = document.getElementById(`pbar-${mx}-${my}`);
-
-            if (entity.craftingState) {
-                // Snelheid hangt af van mixer tier (Mk1 = 1x, Mk2 = 1.5x, Mk3 = 2.5x)
-                entity.craftingState.progress += entity.speedMultiplier;
-                const pct = (entity.craftingState.progress / entity.craftingState.maxProgress) * 100;
-                if (pbar) pbar.style.width = `${Math.min(100, pct)}%`;
-
-                if (entity.craftingState.progress >= entity.craftingState.maxProgress) {
-                    const recipe = entity.craftingState.recipe;
-                    let outputTarget = null;
-
-                    for (const dir of DIRS) {
-                        const tx = mx + dir.dx; ty = my + dir.dy;
-                        const targetCell = grid[`${tx},${ty}`];
-
-                        if (targetCell && (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter' || targetCell.type === 'inleverpunt' || targetCell.type.startsWith('mixer'))) {
-                            const itemsOnTarget = items.filter(i => i.x === tx && i.y === ty);
-                            const maxCap = (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter') ? 3 : 1;
-                            if (itemsOnTarget.length < maxCap) {
-                                outputTarget = { x: tx, y: ty };
-                                break;
-                            }
-                        }
-                    }
-
-                    if (outputTarget) {
-                        const targetCell = grid[`${outputTarget.x},${outputTarget.y}`];
-                        triggerAnimation(entity, 'anim-mix');
-                        
-                        if (targetCell.type === 'inleverpunt') {
-                            const saleValue = processItemSale(recipe.id);
-                            triggerAnimation(targetCell, 'anim-sell');
-                            showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+€${saleValue.toLocaleString('nl-NL')}`, "#20bf6b");
-                        } else if (targetCell.type.startsWith('mixer')) {
-                            targetCell.inventory[recipe.id] = (targetCell.inventory[recipe.id] || 0) + 1;
-                            triggerAnimation(targetCell, 'anim-mix');
-                            showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+${recipe.id}`, recipe.color);
-                        } else {
-                            spawnItem(recipe.id, outputTarget.x, outputTarget.y);
-                        }
-                        
-                        showFloatingText(key, `🧪 ${recipe.formula}`, recipe.color);
-                        entity.craftingState = null;
-                        if (pbar) pbar.style.width = '0%';
-                    }
-                }
-            } else {
-                let targetRecipes = [];
-                if (entity.selectedRecipe && entity.selectedRecipe !== 'AUTO') {
-                    const specificRecipe = RECIPES.find(r => r.id === entity.selectedRecipe);
-                    if (specificRecipe && specificRecipe.lvl <= playerLevel) targetRecipes = [specificRecipe];
-                } else {
-                    targetRecipes = RECIPES.filter(r => r.lvl <= playerLevel).sort((a, b) => b.currentValue - a.currentValue);
-                }
-
-                for (const recipe of targetRecipes) {
-                    let canMake = true;
-                    for (const [elem, count] of Object.entries(recipe.req)) {
-                        if ((entity.inventory[elem] || 0) < count) {
-                            canMake = false;
-                            break;
-                        }
-                    }
-
-                    if (canMake) {
-                        for (const [elem, count] of Object.entries(recipe.req)) {
-                            entity.inventory[elem] -= count;
-                        }
-                        entity.craftingState = {
-                            recipe: recipe,
-                            progress: 0,
-                            maxProgress: recipe.craftTicks
-                        };
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    itemsToRemove.forEach(item => {
-        if (item.visual && item.visual.parentNode) item.visual.parentNode.removeChild(item.visual);
-        const idx = items.indexOf(item);
-        if (idx > -1) items.splice(idx, 1);
-    });
-}
-
-function sellEntireFactory() {
-    let totalRefund = 0;
-
-    for (const key in grid) {
-        const entity = grid[key];
-        const buildingDef = BUILDINGS.find(b => b.id === entity.type);
-        if (buildingDef && buildingDef.price > 0) totalRefund += buildingDef.price;
-        if (entity.obj && entity.obj.parentNode) entity.obj.parentNode.removeChild(entity.obj);
-        delete grid[key];
-    }
-
-    items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
-    items = [];
-
-    money += totalRefund;
-    updateUI();
-
-    const centerX = Math.floor((window.innerWidth - 340) / (2 * CELL_SIZE));
-    const centerY = Math.floor(window.innerHeight / (2 * CELL_SIZE));
-    showFloatingText(`${centerX},${centerY}`, `🏢 FABRIEK VERKOCHT (+€${totalRefund.toLocaleString('nl-NL')})`, "#fbc531");
-}
-
-function upgradeLevel() {
-    const cost = LEVEL_CONFIG[playerLevel] ? LEVEL_CONFIG[playerLevel].costNext : 500000;
-
-    if (money >= cost) {
-        money -= cost;
-        playerLevel++;
-        
-        for (const key in grid) {
-            if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
-        }
-        for (const key in grid) delete grid[key];
-
-        items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
-        items = [];
-
-        money += 1000;
-        updateUI();
-        
-        const centerX = Math.floor((window.innerWidth - 340) / (2 * CELL_SIZE));
-        const centerY = Math.floor(window.innerHeight / (2 * CELL_SIZE));
-        showFloatingText(`${centerX},${centerY}`, `🚀 FABRIEK GEÜPGRADED NAAR LVL ${playerLevel}!`, "#fbc531");
-    } else {
-        alert("Niet genoeg saldo om je fabriek te upgraden!");
-    }
-}
-
 function showFloatingText(key, text, color) {
     const [x, y] = key.split(',').map(Number);
     const el = document.createElement('div');
@@ -853,6 +484,7 @@ function showFloatingText(key, text, color) {
     }, 850);
 }
 
+// EVENT LISTENERS & SPEL INITIALISATIE
 document.addEventListener('keydown', (e) => {
     if (e.key.toLowerCase() === 'r') selectTool('rotate', 0);
     if (e.key.toLowerCase() === 'x') selectTool('delete', 0);
