@@ -8,9 +8,9 @@ let money = 1000;
 let playerLevel = 1;
 let selectedTool = 'cursor';
 let toolPrice = 0;
-let currentBuildDir = 1;
+let currentBuildDir = 1; // 0=Up, 1=Right, 2=Down, 3=Left
 let activeMixerKey = null;
-let currentTab = 'build'; // State tracking voor tabbladen
+let currentTab = 'build';
 
 // Blauwdruk State
 let savedBlueprint = null;
@@ -56,26 +56,26 @@ const RECIPES = [
     { id: 'C7H5N3O6', name: 'TNT', formula: 'C₇H₅N₃O₆', req: { 'C': 7, 'H': 5, 'N': 3, 'O': 6 }, value: 35000, lvl: 5, color: '#ff4757' }
 ];
 
-// Raw Element Values
-const ELEMENT_VALUES = {
-    'H': 2, 'C': 5, 'N': 8, 'O': 3, 'S': 12, 'Cl': 15
-};
+const ELEMENT_VALUES = { 'H': 2, 'C': 5, 'N': 8, 'O': 3, 'S': 12, 'Cl': 15 };
+const ELEMENT_COLORS = { 'H': '#48dbfb', 'C': '#ffffff', 'N': '#a55eea', 'O': '#ff6b6b', 'S': '#fecb57', 'Cl': '#1dd1a1' };
 
-const ELEMENT_COLORS = {
-    'H': '#48dbfb', 'C': '#ffffff', 'N': '#a55eea', 'O': '#ff6b6b', 'S': '#fecb57', 'Cl': '#1dd1a1'
-};
-
-// Available Buildings Definition
 const BUILDINGS = [
     { id: 'cursor', name: '🖱️ Muis (Deselecteren / Instellen)', price: 0, lvl: 1 },
     { id: 'rotate', name: '🔄 Bouwrichting [Sneltoets: R]', price: 0, lvl: 1 },
     { id: 'blueprint', name: '📋 Blauwdruk Maken / Plaatsen', price: 0, lvl: 1 },
+    
+    // Transport & Verdelers
     { id: 'conveyor', name: 'Lopende Band', price: 10, lvl: 1 },
     { id: 'conveyor-curve', name: 'Bocht Rechts ↪️', price: 15, lvl: 1 },
     { id: 'conveyor-curve-left', name: 'Bocht Links ↩️', price: 15, lvl: 1 },
+    { id: 'conveyor-t', name: 'T-Splitsing ┳', price: 20, lvl: 1 },
+    { id: 'conveyor-cross', name: 'Kruispunt ╋', price: 25, lvl: 1 },
+    { id: 'splitter', name: 'Splitser 🔀', price: 30, lvl: 1 },
+
     { id: 'mixer', name: '🧪 Chemische Mixer', price: 300, lvl: 1 },
     { id: 'inleverpunt', name: '🏢 Inleverpunt (Max 3)', price: 100, lvl: 1 },
     
+    // Bronnen in periodiek systeem volgorde
     { id: 'source-h', name: '💧 H-Bron (Waterstof)', price: 100, lvl: 1 },
     { id: 'source-c', name: '🪨 C-Bron (Koolstof)', price: 400, lvl: 2 },
     { id: 'source-n', name: '💨 N-Bron (Stikstof)', price: 500, lvl: 2 },
@@ -86,7 +86,6 @@ const BUILDINGS = [
     { id: 'delete', name: '🗑️ Delete [Sneltoets: X]', price: 0, lvl: 1 }
 ];
 
-// Grid & Entities Store
 const grid = {}; 
 let items = []; 
 let itemIdCounter = 0;
@@ -95,6 +94,7 @@ const DIRS = [ {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: 0, dy: 1}, {dx: -1, dy: 0} 
 const DIR_ARROWS = ['⬆️', '➡️', '⬇️', '⬅️'];
 const CURVE_RIGHT_ARROWS = ['↱', '↴', '↲', '↰'];
 const CURVE_LEFT_ARROWS = ['↰', '↱', '↴', '↲'];
+const T_ARROWS = ['┳', '┫', '┻', '┣'];
 
 const gridContainer = document.getElementById('grid-container');
 
@@ -119,7 +119,6 @@ function initGrid() {
     }
 }
 
-// TABBLAD WISSELEN
 function switchTab(tabName) {
     currentTab = tabName;
     const buildTabBtn = document.getElementById('tab-btn-build');
@@ -159,7 +158,6 @@ function updateUI() {
         document.getElementById('next-level-cost').innerText = `€ 500.000`;
     }
 
-    // Render Gebouwen
     const btnContainer = document.getElementById('build-buttons');
     btnContainer.innerHTML = '';
     
@@ -176,14 +174,16 @@ function updateUI() {
         if (b.id === 'conveyor') displayName = `${DIR_ARROWS[currentBuildDir]} ${b.name}`;
         if (b.id === 'conveyor-curve') displayName = `${CURVE_RIGHT_ARROWS[currentBuildDir]} ${b.name}`;
         if (b.id === 'conveyor-curve-left') displayName = `${CURVE_LEFT_ARROWS[currentBuildDir]} ${b.name}`;
+        if (b.id === 'conveyor-t') displayName = `${T_ARROWS[currentBuildDir]} ${b.name}`;
+        if (b.id === 'splitter') displayName = `🔀 ${b.name} (${DIR_ARROWS[currentBuildDir]})`;
+        if (b.id.startsWith('source-')) {
+            const elName = b.name.split(' ')[1];
+            displayName = `${elName} ${DIR_ARROWS[currentBuildDir]}`;
+        }
         if (b.id === 'rotate') displayName = `🔄 Richting (${DIR_ARROWS[currentBuildDir]}) [R]`;
 
         if (b.id === 'blueprint') {
-            if (savedBlueprint) {
-                displayName = `📋 Plaats Blauwdruk (€${blueprintCost.toLocaleString('nl-NL')})`;
-            } else {
-                displayName = `📋 Blauwdruk Maken`;
-            }
+            displayName = savedBlueprint ? `📋 Plaats Blauwdruk (€${blueprintCost.toLocaleString('nl-NL')})` : `📋 Blauwdruk Maken`;
         }
 
         btn.innerHTML = `
@@ -197,12 +197,11 @@ function updateUI() {
     const bpText = document.getElementById('blueprint-status-text');
     if (savedBlueprint) {
         bpCard.classList.remove('hidden');
-        bpText.innerText = `Opgeslagen: ${savedBlueprint.length} gebouwen. Totale prijs: €${blueprintCost.toLocaleString('nl-NL')}. Klik op het grid om te plaatsen.`;
+        bpText.innerText = `Opgeslagen: ${savedBlueprint.length} gebouwen (€${blueprintCost.toLocaleString('nl-NL')}). Klik op het grid om te plaatsen.`;
     } else {
         bpCard.classList.add('hidden');
     }
 
-    // Render Recepten & Waarde Lijst
     const recipeContainer = document.getElementById('recipe-list');
     recipeContainer.innerHTML = '';
 
@@ -253,7 +252,6 @@ function selectTool(toolId, price) {
     toolPrice = price;
 
     gridContainer.style.cursor = selectedTool === 'delete' ? 'not-allowed' : 'default';
-
     updateUI();
 }
 
@@ -262,20 +260,14 @@ function handleGridClick(x, y) {
 
     if (selectedTool === 'blueprint_create') {
         if (blueprintStep === 1) {
-            bpStartX = x;
-            bpStartY = y;
-            blueprintStep = 2;
-            
+            bpStartX = x; bpStartY = y; blueprintStep = 2;
             const startEl = document.getElementById(`cell-${x}-${y}`);
             if (startEl) startEl.classList.add('grid-cell-bp-start');
-
             showFloatingText(key, "Hoek 1 gekozen! Klik nu op 2e hoek", "#60a5fa");
             return;
         } else if (blueprintStep === 2) {
-            const minX = Math.min(bpStartX, x);
-            const maxX = Math.max(bpStartX, x);
-            const minY = Math.min(bpStartY, y);
-            const maxY = Math.max(bpStartY, y);
+            const minX = Math.min(bpStartX, x); maxX = Math.max(bpStartX, x);
+            const minY = Math.min(bpStartY, y); maxY = Math.max(bpStartY, y);
 
             const startEl = document.getElementById(`cell-${bpStartX}-${bpStartY}`);
             if (startEl) startEl.classList.remove('grid-cell-bp-start');
@@ -291,10 +283,8 @@ function handleGridClick(x, y) {
                         totalBpCost += bDef ? bDef.price : 0;
 
                         savedBlueprint.push({
-                            relX: bx - minX,
-                            relY: by - minY,
-                            type: grid[bKey].type,
-                            dir: grid[bKey].dir,
+                            relX: bx - minX, relY: by - minY,
+                            type: grid[bKey].type, dir: grid[bKey].dir,
                             selectedRecipe: grid[bKey].selectedRecipe || 'AUTO'
                         });
                     }
@@ -303,15 +293,12 @@ function handleGridClick(x, y) {
 
             if (savedBlueprint.length === 0) {
                 showFloatingText(key, "Geen gebouwen gekozen!", "#ff6b6b");
-                savedBlueprint = null;
-                blueprintStep = 1;
+                savedBlueprint = null; blueprintStep = 1;
             } else {
-                blueprintCost = totalBpCost;
-                blueprintStep = 0;
+                blueprintCost = totalBpCost; blueprintStep = 0;
                 selectedTool = 'blueprint_place';
                 showFloatingText(key, `📋 Blauwdruk Opgeslagen! (${savedBlueprint.length} gebouwen)`, "#20bf6b");
             }
-
             updateUI();
             return;
         }
@@ -319,7 +306,6 @@ function handleGridClick(x, y) {
 
     if (selectedTool === 'blueprint_place') {
         if (!savedBlueprint || savedBlueprint.length === 0) return;
-
         if (money < blueprintCost) {
             showFloatingText(key, `Niet genoeg geld! (€${blueprintCost.toLocaleString('nl-NL')} nodig)`, "#ff6b6b");
             return;
@@ -335,18 +321,14 @@ function handleGridClick(x, y) {
         money -= blueprintCost;
 
         savedBlueprint.forEach(item => {
-            const tx = x + item.relX;
-            const ty = y + item.relY;
+            const tx = x + item.relX; ty = y + item.relY;
             const tKey = `${tx},${ty}`;
 
             if (tx >= 0 && tx < GRID_WIDTH && ty >= 0 && ty < GRID_HEIGHT) {
                 if (grid[tKey]) {
-                    if (grid[tKey].obj && grid[tKey].obj.parentNode) {
-                        grid[tKey].obj.parentNode.removeChild(grid[tKey].obj);
-                    }
+                    if (grid[tKey].obj && grid[tKey].obj.parentNode) grid[tKey].obj.parentNode.removeChild(grid[tKey].obj);
                     delete grid[tKey];
                 }
-
                 buildEntityWithDirAndRecipe(tx, ty, item.type, item.dir, item.selectedRecipe);
             }
         });
@@ -365,9 +347,7 @@ function handleGridClick(x, y) {
                 money += refund;
             }
 
-            if (grid[key].obj && grid[key].obj.parentNode) {
-                grid[key].obj.parentNode.removeChild(grid[key].obj);
-            }
+            if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
             delete grid[key];
 
             const itemsToDelete = items.filter(i => i.x === x && i.y === y);
@@ -388,15 +368,14 @@ function handleGridClick(x, y) {
         return;
     }
 
-    if (grid[key] && (grid[key].type === 'conveyor' || grid[key].type === 'conveyor-curve' || grid[key].type === 'conveyor-curve-left')) {
+    // ROTEREN VAN BANDEN OF BRONNEN BIJ KLIKKEN
+    if (grid[key] && (grid[key].type.startsWith('conveyor') || grid[key].type === 'splitter' || grid[key].type.startsWith('source-'))) {
         if (selectedTool === 'cursor' || selectedTool === grid[key].type) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
             grid[key].dir = (grid[key].dir + 1) % 4;
             grid[key].obj.classList.add(`dir-${grid[key].dir}`);
-            
-            if (grid[key].type === 'conveyor') grid[key].obj.innerText = DIR_ARROWS[grid[key].dir];
-            if (grid[key].type === 'conveyor-curve') grid[key].obj.innerText = CURVE_RIGHT_ARROWS[grid[key].dir];
-            if (grid[key].type === 'conveyor-curve-left') grid[key].obj.innerText = CURVE_LEFT_ARROWS[grid[key].dir];
+
+            updateEntityText(grid[key]);
             return;
         }
     }
@@ -413,20 +392,15 @@ function handleGridClick(x, y) {
 
     if (grid[key]) {
         if (grid[key].type === selectedTool) return;
-
         if (money < toolPrice) {
             showFloatingText(key, "Niet genoeg geld!", "#ff6b6b");
             return;
         }
 
         const buildingDef = BUILDINGS.find(b => b.id === grid[key].type);
-        if (buildingDef && buildingDef.price > 0) {
-            money += Math.floor(buildingDef.price * 0.8);
-        }
+        if (buildingDef && buildingDef.price > 0) money += Math.floor(buildingDef.price * 0.8);
 
-        if (grid[key].obj && grid[key].obj.parentNode) {
-            grid[key].obj.parentNode.removeChild(grid[key].obj);
-        }
+        if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
         delete grid[key];
 
         const itemsToDelete = items.filter(i => i.x === x && i.y === y);
@@ -452,6 +426,22 @@ function buildEntity(x, y, type) {
     buildEntityWithDirAndRecipe(x, y, type, currentBuildDir, 'AUTO');
 }
 
+function updateEntityText(entity) {
+    const dir = entity.dir;
+    const type = entity.type;
+
+    if (type === 'conveyor') entity.obj.innerText = DIR_ARROWS[dir];
+    else if (type === 'conveyor-curve') entity.obj.innerText = CURVE_RIGHT_ARROWS[dir];
+    else if (type === 'conveyor-curve-left') entity.obj.innerText = CURVE_LEFT_ARROWS[dir];
+    else if (type === 'conveyor-t') entity.obj.innerText = T_ARROWS[dir];
+    else if (type === 'conveyor-cross') entity.obj.innerText = '╋';
+    else if (type === 'splitter') entity.obj.innerText = '🔀';
+    else if (type.startsWith('source-')) {
+        const elem = type.replace('source-', '').toUpperCase();
+        entity.obj.innerHTML = `<div class="source-label">${elem} ${DIR_ARROWS[dir]}</div>`;
+    }
+}
+
 function buildEntityWithDirAndRecipe(x, y, type, dir, recipe = 'AUTO') {
     const key = `${x},${y}`;
     const el = document.createElement('div');
@@ -465,42 +455,32 @@ function buildEntityWithDirAndRecipe(x, y, type, dir, recipe = 'AUTO') {
         handleGridClick(x, y);
     };
 
-    if (type === 'conveyor') {
-        el.innerText = DIR_ARROWS[dir];
-        el.classList.add(`dir-${dir}`);
-    } else if (type === 'conveyor-curve') {
-        el.innerText = CURVE_RIGHT_ARROWS[dir];
-        el.classList.add(`dir-${dir}`);
-    } else if (type === 'conveyor-curve-left') {
-        el.innerText = CURVE_LEFT_ARROWS[dir];
-        el.classList.add(`dir-${dir}`);
-    } else if (type.startsWith('source-')) {
-        const elem = type.replace('source-', '').toUpperCase();
-        el.innerText = elem;
-    } else if (type === 'mixer') {
+    grid[key] = { 
+        type, 
+        dir, 
+        obj: el, 
+        inventory: {},
+        selectedRecipe: recipe,
+        splitToggle: 0
+    };
+
+    el.classList.add(`dir-${dir}`);
+    if (type === 'mixer') {
         const rec = RECIPES.find(r => r.id === recipe);
         const labelText = recipe === 'AUTO' ? 'AUTO' : (rec ? rec.formula : recipe);
         const labelColor = recipe === 'AUTO' ? '#88eaab' : (rec ? rec.color : '#ffffff');
         el.innerHTML = `🧪<span class="mixer-label" id="label-${x}-${y}" style="color: ${labelColor}">${labelText}</span>`;
     } else if (type === 'inleverpunt') {
         el.innerText = '🏢';
+    } else {
+        updateEntityText(grid[key]);
     }
 
-    grid[key] = { 
-        type, 
-        dir, 
-        obj: el, 
-        inventory: {},
-        selectedRecipe: recipe
-    };
     gridContainer.appendChild(el);
 }
 
 function resetBlueprint() {
-    savedBlueprint = null;
-    blueprintCost = 0;
-    blueprintStep = 0;
-    selectedTool = 'cursor';
+    savedBlueprint = null; blueprintCost = 0; blueprintStep = 0; selectedTool = 'cursor';
     updateUI();
 }
 
@@ -584,31 +564,42 @@ function spawnItem(type, x, y) {
     el.style.backgroundColor = color;
     if (type.length > 3) el.style.fontSize = '8px';
 
-    updateVisualPosition(el, x, y, 0);
-    gridContainer.appendChild(el);
+    const itemObj = { id, type, x, y, visual: el, movedThisTick: false, lastDir: 1 };
+    items.push(itemObj);
 
-    items.push({
-        id,
-        type,
-        x,
-        y,
-        visual: el,
-        movedThisTick: false
-    });
+    updateVisualPosition(itemObj, 0);
+    gridContainer.appendChild(el);
 }
 
-function updateVisualPosition(element, x, y, slot = 0) {
-    const offsets = [
-        { dx: 14, dy: 14 },
-        { dx: 5, dy: 5 },
-        { dx: 23, dy: 23 }
-    ];
-    const offset = offsets[slot % 3] || { dx: 14, dy: 14 };
-    element.style.left = `${(x * CELL_SIZE) + offset.dx}px`;
-    element.style.top = `${(y * CELL_SIZE) + offset.dy}px`;
+// BEREKENT POSITIE VOOR ALLE 3 DE ITEMS OP DE BAND ACHTER ELKAAR EN OVERZICHTELIJK
+function updateVisualPosition(item, slotIndex = 0) {
+    const cell = grid[`${item.x},${item.y}`];
+    let dir = item.lastDir !== undefined ? item.lastDir : 1;
+    if (cell && cell.dir !== undefined) dir = cell.dir;
+
+    const dirVec = DIRS[dir];
+    // Slot 0 (vooraan = 24px uit midden), Slot 1 (midden = 15px), Slot 2 (achteraan = 6px)
+    const slotOffset = (1 - slotIndex) * 11;
+    const centerX = (item.x * CELL_SIZE) + 15;
+    const centerY = (item.y * CELL_SIZE) + 15;
+
+    const posX = centerX + (dirVec.dx * slotOffset);
+    const posY = centerY + (dirVec.dy * slotOffset);
+
+    item.visual.style.left = `${posX}px`;
+    item.visual.style.top = `${posY}px`;
+}
+
+function triggerAnimation(entityObj, classCss) {
+    if (!entityObj || !entityObj.obj) return;
+    entityObj.obj.classList.remove(classCss);
+    void entityObj.obj.offsetWidth; // Force reflow
+    entityObj.obj.classList.add(classCss);
+    setTimeout(() => entityObj.obj.classList.remove(classCss), 500);
 }
 
 function gameTick() {
+    // 1. BRONNEN PRODUCTIE (Slechts 1 vast uitgangspunt aangegeven met pijl)
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type.startsWith('source-')) {
@@ -623,9 +614,9 @@ function gameTick() {
     }
 
     items.forEach(i => i.movedThisTick = false);
-
     const itemsToRemove = [];
 
+    // 2. ITEMS BEWEGEN EN TRANSPORTEREN
     items.forEach(item => {
         if (item.movedThisTick) return;
 
@@ -635,10 +626,25 @@ function gameTick() {
         if (currentCell) {
             let moveDirs = [];
             
-            if (currentCell.type.startsWith('conveyor')) {
+            if (currentCell.type.startsWith('source-')) {
+                // BRON HEEFT SLECHTS 1 UITGANGSRICHTING (entity.dir)!
                 moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type.startsWith('source-')) {
-                moveDirs = DIRS;
+            } else if (currentCell.type === 'conveyor') {
+                moveDirs = [ DIRS[currentCell.dir] ];
+            } else if (currentCell.type === 'conveyor-curve') {
+                moveDirs = [ DIRS[currentCell.dir] ];
+            } else if (currentCell.type === 'conveyor-curve-left') {
+                moveDirs = [ DIRS[currentCell.dir] ];
+            } else if (currentCell.type === 'conveyor-t') {
+                moveDirs = [ DIRS[currentCell.dir] ];
+            } else if (currentCell.type === 'conveyor-cross') {
+                // KRUISPUNT: item vervolgt de richting waar het vandaan kwam!
+                moveDirs = [ DIRS[item.lastDir !== undefined ? item.lastDir : currentCell.dir] ];
+            } else if (currentCell.type === 'splitter') {
+                // SPLITSER: Wisselt af tussen Links en Rechts van de hoofdrichting!
+                const mainDir = currentCell.dir;
+                const outDir = (currentCell.splitToggle === 0) ? (mainDir + 3) % 4 : (mainDir + 1) % 4;
+                moveDirs = [ DIRS[outDir] ];
             }
 
             for (const dirVec of moveDirs) {
@@ -648,19 +654,34 @@ function gameTick() {
                 const nextCell = grid[nextKey];
 
                 if (nextX >= 0 && nextX < GRID_WIDTH && nextY >= 0 && nextY < GRID_HEIGHT) {
-                    if (nextCell && (nextCell.type.startsWith('conveyor') || nextCell.type === 'mixer' || nextCell.type === 'inleverpunt')) {
+                    if (nextCell && (nextCell.type.startsWith('conveyor') || nextCell.type === 'splitter' || nextCell.type === 'mixer' || nextCell.type === 'inleverpunt')) {
                         
                         const itemsOnNextCell = items.filter(i => i.x === nextX && i.y === nextY);
-                        const maxCap = nextCell.type.startsWith('conveyor') ? 3 : 1;
+                        const maxCap = (nextCell.type.startsWith('conveyor') || nextCell.type === 'splitter') ? 3 : 1;
                         
                         if (itemsOnNextCell.length < maxCap) {
+                            // Bron animatie bij uitstoot!
+                            if (currentCell.type.startsWith('source-')) {
+                                triggerAnimation(currentCell, 'anim-push');
+                            }
+
+                            // Update item positie
                             item.x = nextX;
                             item.y = nextY;
-                            updateVisualPosition(item.visual, item.x, item.y, itemsOnNextCell.length);
+                            item.lastDir = DIRS.findIndex(d => d.dx === dirVec.dx && d.dy === dirVec.dy);
                             item.movedThisTick = true;
 
+                            // Splitser toggle wisselen
+                            if (currentCell.type === 'splitter') {
+                                currentCell.splitToggle = 1 - currentCell.splitToggle;
+                            }
+
+                            updateVisualPosition(item, itemsOnNextCell.length);
+
+                            // MIXER EN OPNAME ANIMATIE (ACCEPTEERT VAN MEERDERE KANTEN SIMULTAAN)
                             if (nextCell.type === 'mixer') {
                                 nextCell.inventory[item.type] = (nextCell.inventory[item.type] || 0) + 1;
+                                triggerAnimation(nextCell, 'anim-mix');
                                 itemsToRemove.push(item);
                             } else if (nextCell.type === 'inleverpunt') {
                                 let value = ELEMENT_VALUES[item.type] || 0;
@@ -669,6 +690,7 @@ function gameTick() {
 
                                 money += value;
                                 updateUI();
+                                triggerAnimation(nextCell, 'anim-sell');
                                 showFloatingText(nextKey, `+€${value.toLocaleString('nl-NL')}`, "#20bf6b");
                                 itemsToRemove.push(item);
                             }
@@ -681,6 +703,15 @@ function gameTick() {
         }
     });
 
+    // Herbereken visuele posities voor alle items zodat ze overzichtelijk op de band staan
+    for (const key in grid) {
+        const cellItems = items.filter(i => `${i.x},${i.y}` === key);
+        cellItems.forEach((item, slotIndex) => {
+            updateVisualPosition(item, slotIndex);
+        });
+    }
+
+    // 3. MIXERS PROCESSING & PRODUCTIE
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type === 'mixer') {
@@ -714,12 +745,12 @@ function gameTick() {
                         const ty = my + dir.dy;
                         const targetCell = grid[`${tx},${ty}`];
 
-                        if (targetCell && (targetCell.type.startsWith('conveyor') || targetCell.type === 'inleverpunt' || targetCell.type === 'mixer')) {
+                        if (targetCell && (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter' || targetCell.type === 'inleverpunt' || targetCell.type === 'mixer')) {
                             const itemsOnTarget = items.filter(i => i.x === tx && i.y === ty);
-                            const maxCap = targetCell.type.startsWith('conveyor') ? 3 : 1;
+                            const maxCap = (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter') ? 3 : 1;
 
                             if (itemsOnTarget.length < maxCap) {
-                                outputTarget = { x: tx, y: ty, slot: itemsOnTarget.length };
+                                outputTarget = { x: tx, y: ty };
                                 break;
                             }
                         }
@@ -731,13 +762,16 @@ function gameTick() {
                         }
                         
                         const targetCell = grid[`${outputTarget.x},${outputTarget.y}`];
+                        triggerAnimation(entity, 'anim-mix');
                         
                         if (targetCell.type === 'inleverpunt') {
                             money += recipe.value;
                             updateUI();
+                            triggerAnimation(targetCell, 'anim-sell');
                             showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+€${recipe.value.toLocaleString('nl-NL')}`, "#20bf6b");
                         } else if (targetCell.type === 'mixer') {
                             targetCell.inventory[recipe.id] = (targetCell.inventory[recipe.id] || 0) + 1;
+                            triggerAnimation(targetCell, 'anim-mix');
                             showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+${recipe.id}`, recipe.color);
                         } else {
                             spawnItem(recipe.id, outputTarget.x, outputTarget.y);
@@ -764,18 +798,12 @@ function sellEntireFactory() {
     for (const key in grid) {
         const entity = grid[key];
         const buildingDef = BUILDINGS.find(b => b.id === entity.type);
-        if (buildingDef && buildingDef.price > 0) {
-            totalRefund += buildingDef.price;
-        }
-        if (entity.obj && entity.obj.parentNode) {
-            entity.obj.parentNode.removeChild(entity.obj);
-        }
+        if (buildingDef && buildingDef.price > 0) totalRefund += buildingDef.price;
+        if (entity.obj && entity.obj.parentNode) entity.obj.parentNode.removeChild(entity.obj);
         delete grid[key];
     }
 
-    items.forEach(i => {
-        if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual);
-    });
+    items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
     items = [];
 
     money += totalRefund;
@@ -802,7 +830,6 @@ function upgradeLevel() {
         items = [];
 
         money += 1000;
-        
         updateUI();
         
         const centerX = Math.floor((window.innerWidth - 340) / (2 * CELL_SIZE));
@@ -842,12 +869,8 @@ function showFloatingText(key, text, color) {
 }
 
 document.addEventListener('keydown', (e) => {
-    if (e.key.toLowerCase() === 'r') {
-        selectTool('rotate', 0);
-    }
-    if (e.key.toLowerCase() === 'x') {
-        selectTool('delete', 0);
-    }
+    if (e.key.toLowerCase() === 'r') selectTool('rotate', 0);
+    if (e.key.toLowerCase() === 'x') selectTool('delete', 0);
 });
 
 gridContainer.addEventListener('contextmenu', (e) => e.preventDefault());

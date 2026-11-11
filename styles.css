@@ -36,7 +36,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     transition: background-color 0.15s;
 }
@@ -52,26 +52,26 @@ body {
 }
 
 /* Entity Visual Classes */
-.conveyor, .conveyor-curve, .conveyor-curve-left { 
+.conveyor, .conveyor-curve, .conveyor-curve-left, .conveyor-t, .conveyor-cross, .splitter { 
     background-color: rgba(255, 255, 255, 0.05); 
     color: #fbc531;
-    font-size: 22px;
+    font-size: 20px;
     background-size: 20px 20px !important;
 }
 
-.conveyor.dir-0, .conveyor-curve.dir-0, .conveyor-curve-left.dir-0 {
+.conveyor.dir-0, .conveyor-curve.dir-0, .conveyor-curve-left.dir-0, .conveyor-t.dir-0, .splitter.dir-0 {
     background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-up 0.8s linear infinite;
 }
-.conveyor.dir-1, .conveyor-curve.dir-1, .conveyor-curve-left.dir-1 {
+.conveyor.dir-1, .conveyor-curve.dir-1, .conveyor-curve-left.dir-1, .conveyor-t.dir-1, .splitter.dir-1 {
     background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-right 0.8s linear infinite;
 }
-.conveyor.dir-2, .conveyor-curve.dir-2, .conveyor-curve-left.dir-2 {
+.conveyor.dir-2, .conveyor-curve.dir-2, .conveyor-curve-left.dir-2, .conveyor-t.dir-2, .splitter.dir-2 {
     background-image: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-down 0.8s linear infinite;
 }
-.conveyor.dir-3, .conveyor-curve.dir-3, .conveyor-curve-left.dir-3 {
+.conveyor.dir-3, .conveyor-curve.dir-3, .conveyor-curve-left.dir-3, .conveyor-t.dir-3, .splitter.dir-3 {
     background-image: repeating-linear-gradient(270deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
     animation: belt-left 0.8s linear infinite;
 }
@@ -81,12 +81,22 @@ body {
 @keyframes belt-down { from { background-position: 0 0; } to { background-position: 0 20px; } }
 @keyframes belt-left { from { background-position: 0 0; } to { background-position: -20px 0; } }
 
+/* Element Sources */
 .source-h { background-color: rgba(72, 219, 251, 0.2); border: 2px solid #48dbfb; color: #48dbfb; }
 .source-c { background-color: rgba(200, 200, 200, 0.2); border: 2px solid #aaaaaa; color: #ffffff; }
 .source-n { background-color: rgba(165, 94, 234, 0.2); border: 2px solid #a55eea; color: #a55eea; }
 .source-o { background-color: rgba(255, 107, 107, 0.2); border: 2px solid #ff6b6b; color: #ff6b6b; }
 .source-s { background-color: rgba(254, 202, 87, 0.2); border: 2px solid #fecb57; color: #fecb57; }
 .source-cl { background-color: rgba(29, 209, 161, 0.2); border: 2px solid #1dd1a1; color: #1dd1a1; }
+
+.source-label {
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1.1;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+}
 
 .mixer { 
     background-color: rgba(32, 191, 107, 0.25); 
@@ -114,25 +124,53 @@ body {
     color: #f7b731;
 }
 
+/* ANIMATIES VOOR VERWERKING / SPONSORING */
+@keyframes anim-source-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); filter: brightness(1.4); }
+    100% { transform: scale(1); }
+}
+.anim-push {
+    animation: anim-source-pulse 0.4s ease-out;
+}
+
+@keyframes anim-mixer-craft {
+    0% { transform: scale(1) rotate(0deg); }
+    50% { transform: scale(1.12) rotate(12deg); border-color: #55efc4; box-shadow: 0 0 12px rgba(32,191,107,0.8); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+.anim-mix {
+    animation: anim-mixer-craft 0.5s ease-in-out;
+}
+
+@keyframes anim-sell-bounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); border-color: #ffeaa7; box-shadow: 0 0 15px rgba(247,183,49,0.9); }
+    100% { transform: scale(1); }
+}
+.anim-sell {
+    animation: anim-sell-bounce 0.4s ease-out;
+}
+
 /* Moving Items */
 .item {
     position: absolute;
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 9px;
-    font-weight: 800;
+    font-size: 8px;
+    font-weight: 900;
     color: #121316;
     z-index: 10;
     transition: all 0.35s linear;
     pointer-events: none;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.6);
 }
 
-/* UI Sidebar - flex-shrink: 0 voorkomt dat de sidebar wordt ingedrukt */
+/* UI Sidebar */
 #ui-panel {
     width: 340px;
     flex-shrink: 0;
@@ -144,7 +182,6 @@ body {
     z-index: 100;
 }
 
-/* Tabs Styling */
 .tab-btn.active {
     background-color: #1f2937 !important;
     color: #fbbf24 !important;
