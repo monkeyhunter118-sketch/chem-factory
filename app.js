@@ -1,16 +1,17 @@
 const CELL_SIZE = 50;
 let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE) * 3;
 let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE) * 3;
-const TICK_RATE = 1600;
+const TICK_RATE = 400; // 4x snellere tickrate! (voorheen 1600ms)
 
 // Game State
 let money = 1000;
 let playerLevel = 1;
 let selectedTool = 'cursor';
 let toolPrice = 0;
-let currentBuildDir = 1; // 0=Up, 1=Right, 2=Down, 3=Left
+let currentBuildDir = 1;
 let activeMixerKey = null;
 let currentTab = 'build';
+let tickCounter = 0;
 
 // Blauwdruk State
 let savedBlueprint = null;
@@ -28,32 +29,32 @@ const LEVEL_CONFIG = {
     5: { title: "Geavanceerde Biochemie & Explosieven (TNT)", costNext: 250000 }
 };
 
-// Chemical Recipes
+// Chemical Recipes (met bereidingstijd in ticks & dynamische marktprijzen)
 const RECIPES = [
-    { id: 'H2O', name: 'Water', formula: 'H₂O', req: { 'H': 2, 'O': 1 }, value: 60, lvl: 1, color: '#38ada9' },
-    { id: 'H2O2', name: 'Waterstofperoxide', formula: 'H₂O₂', req: { 'H': 2, 'O': 2 }, value: 120, lvl: 1, color: '#74b9ff' },
+    { id: 'H2O', name: 'Water', formula: 'H₂O', req: { 'H': 2, 'O': 1 }, craftTicks: 1, baseValue: 60, currentValue: 60, lvl: 1, color: '#38ada9' },
+    { id: 'H2O2', name: 'Waterstofperoxide', formula: 'H₂O₂', req: { 'H': 2, 'O': 2 }, craftTicks: 2, baseValue: 120, currentValue: 120, lvl: 1, color: '#74b9ff' },
     
-    { id: 'CO', name: 'Koolmonoxide', formula: 'CO', req: { 'C': 1, 'O': 1 }, value: 90, lvl: 2, color: '#b2bec3' },
-    { id: 'CO2', name: 'Koolstofdioxide', formula: 'CO₂', req: { 'C': 1, 'O': 2 }, value: 150, lvl: 2, color: '#78e08f' },
-    { id: 'NH3', name: 'Ammoniak', formula: 'NH₃', req: { 'N': 1, 'H': 3 }, value: 220, lvl: 2, color: '#f6b93b' },
-    { id: 'CH4', name: 'Methaan', formula: 'CH₄', req: { 'C': 1, 'H': 4 }, value: 350, lvl: 2, color: '#e67e22' },
-    { id: 'H2CO3', name: 'Koolzuur', formula: 'H₂CO₃', req: { 'H': 2, 'C': 1, 'O': 3 }, value: 480, lvl: 2, color: '#a29bfe' },
+    { id: 'CO', name: 'Koolmonoxide', formula: 'CO', req: { 'C': 1, 'O': 1 }, craftTicks: 2, baseValue: 90, currentValue: 90, lvl: 2, color: '#b2bec3' },
+    { id: 'CO2', name: 'Koolstofdioxide', formula: 'CO₂', req: { 'C': 1, 'O': 2 }, craftTicks: 3, baseValue: 150, currentValue: 150, lvl: 2, color: '#78e08f' },
+    { id: 'NH3', name: 'Ammoniak', formula: 'NH₃', req: { 'N': 1, 'H': 3 }, craftTicks: 3, baseValue: 220, currentValue: 220, lvl: 2, color: '#f6b93b' },
+    { id: 'CH4', name: 'Methaan', formula: 'CH₄', req: { 'C': 1, 'H': 4 }, craftTicks: 4, baseValue: 350, currentValue: 350, lvl: 2, color: '#e67e22' },
+    { id: 'H2CO3', name: 'Koolzuur', formula: 'H₂CO₃', req: { 'H': 2, 'C': 1, 'O': 3 }, craftTicks: 4, baseValue: 480, currentValue: 480, lvl: 2, color: '#a29bfe' },
 
-    { id: 'HCl', name: 'Zoutzuur', formula: 'HCl', req: { 'H': 1, 'Cl': 1 }, value: 180, lvl: 3, color: '#e55039' },
-    { id: 'SO2', name: 'Zwaveldioxide', formula: 'SO₂', req: { 'S': 1, 'O': 2 }, value: 280, lvl: 3, color: '#4a69bd' },
-    { id: 'NO2', name: 'Stikstofdioxide', formula: 'NO₂', req: { 'N': 1, 'O': 2 }, value: 320, lvl: 3, color: '#fd79a8' },
-    { id: 'Cl2', name: 'Chloorgas', formula: 'Cl₂', req: { 'Cl': 2 }, value: 400, lvl: 3, color: '#00b894' },
-    { id: 'HNO3', name: 'Salpeterzuur', formula: 'HNO₃', req: { 'H': 1, 'N': 1, 'O': 3 }, value: 1200, lvl: 3, color: '#ff7675' },
-    { id: 'H2SO4', name: 'Zwavelzuur', formula: 'H₂SO₄', req: { 'H': 2, 'S': 1, 'O': 4 }, value: 1500, lvl: 3, color: '#b8e994' },
+    { id: 'HCl', name: 'Zoutzuur', formula: 'HCl', req: { 'H': 1, 'Cl': 1 }, craftTicks: 2, baseValue: 180, currentValue: 180, lvl: 3, color: '#e55039' },
+    { id: 'SO2', name: 'Zwaveldioxide', formula: 'SO₂', req: { 'S': 1, 'O': 2 }, craftTicks: 3, baseValue: 280, currentValue: 280, lvl: 3, color: '#4a69bd' },
+    { id: 'NO2', name: 'Stikstofdioxide', formula: 'NO₂', req: { 'N': 1, 'O': 2 }, craftTicks: 3, baseValue: 320, currentValue: 320, lvl: 3, color: '#fd79a8' },
+    { id: 'Cl2', name: 'Chloorgas', formula: 'Cl₂', req: { 'Cl': 2 }, craftTicks: 3, baseValue: 400, currentValue: 400, lvl: 3, color: '#00b894' },
+    { id: 'HNO3', name: 'Salpeterzuur', formula: 'HNO₃', req: { 'H': 1, 'N': 1, 'O': 3 }, craftTicks: 5, baseValue: 1200, currentValue: 1200, lvl: 3, color: '#ff7675' },
+    { id: 'H2SO4', name: 'Zwavelzuur', formula: 'H₂SO₄', req: { 'H': 2, 'S': 1, 'O': 4 }, craftTicks: 6, baseValue: 1500, currentValue: 1500, lvl: 3, color: '#b8e994' },
 
-    { id: 'C2H6O', name: 'Ethanol', formula: 'C₂H₆O', req: { 'C': 2, 'H': 6, 'O': 1 }, value: 2400, lvl: 4, color: '#fdcb6e' },
-    { id: 'C2H4O2', name: 'Azijnzuur', formula: 'C₂H₄O₂', req: { 'C': 2, 'H': 4, 'O': 2 }, value: 3100, lvl: 4, color: '#e17055' },
-    { id: 'CHCl3', name: 'Chloroform', formula: 'CHCl₃', req: { 'C': 1, 'H': 1, 'Cl': 3 }, value: 5200, lvl: 4, color: '#00cec9' },
-    { id: 'CH4N2O', name: 'Ureum', formula: 'CH₄N₂O', req: { 'C': 1, 'H': 4, 'N': 2, 'O': 1 }, value: 6800, lvl: 4, color: '#6c5ce7' },
-    { id: 'C6H12O6', name: 'Glucose', formula: 'C₆H₁₂O₆', req: { 'C': 6, 'H': 12, 'O': 6 }, value: 8500, lvl: 4, color: '#f8c291' },
+    { id: 'C2H6O', name: 'Ethanol', formula: 'C₂H₆O', req: { 'C': 2, 'H': 6, 'O': 1 }, craftTicks: 6, baseValue: 2400, currentValue: 2400, lvl: 4, color: '#fdcb6e' },
+    { id: 'C2H4O2', name: 'Azijnzuur', formula: 'C₂H₄O₂', req: { 'C': 2, 'H': 4, 'O': 2 }, craftTicks: 7, baseValue: 3100, currentValue: 3100, lvl: 4, color: '#e17055' },
+    { id: 'CHCl3', name: 'Chloroform', formula: 'CHCl₃', req: { 'C': 1, 'H': 1, 'Cl': 3 }, craftTicks: 8, baseValue: 5200, currentValue: 5200, lvl: 4, color: '#00cec9' },
+    { id: 'CH4N2O', name: 'Ureum', formula: 'CH₄N₂O', req: { 'C': 1, 'H': 4, 'N': 2, 'O': 1 }, craftTicks: 8, baseValue: 6800, currentValue: 6800, lvl: 4, color: '#6c5ce7' },
+    { id: 'C6H12O6', name: 'Glucose', formula: 'C₆H₁₂O₆', req: { 'C': 6, 'H': 12, 'O': 6 }, craftTicks: 12, baseValue: 8500, currentValue: 8500, lvl: 4, color: '#f8c291' },
 
-    { id: 'C3H5N3O9', name: 'Nitroglycerine', formula: 'C₃H₅N₃O₉', req: { 'C': 3, 'H': 5, 'N': 3, 'O': 9 }, value: 18500, lvl: 5, color: '#d63031' },
-    { id: 'C7H5N3O6', name: 'TNT', formula: 'C₇H₅N₃O₆', req: { 'C': 7, 'H': 5, 'N': 3, 'O': 6 }, value: 35000, lvl: 5, color: '#ff4757' }
+    { id: 'C3H5N3O9', name: 'Nitroglycerine', formula: 'C₃H₅N₃O₉', req: { 'C': 3, 'H': 5, 'N': 3, 'O': 9 }, craftTicks: 14, baseValue: 18500, currentValue: 18500, lvl: 5, color: '#d63031' },
+    { id: 'C7H5N3O6', name: 'TNT', formula: 'C₇H₅N₃O₆', req: { 'C': 7, 'H': 5, 'N': 3, 'O': 6 }, craftTicks: 18, baseValue: 35000, currentValue: 35000, lvl: 5, color: '#ff4757' }
 ];
 
 const ELEMENT_VALUES = { 'H': 2, 'C': 5, 'N': 8, 'O': 3, 'S': 12, 'Cl': 15 };
@@ -64,7 +65,6 @@ const BUILDINGS = [
     { id: 'rotate', name: '🔄 Bouwrichting [Sneltoets: R]', price: 0, lvl: 1 },
     { id: 'blueprint', name: '📋 Blauwdruk Maken / Plaatsen', price: 0, lvl: 1 },
     
-    // Transport & Verdelers
     { id: 'conveyor', name: 'Lopende Band', price: 10, lvl: 1 },
     { id: 'conveyor-curve', name: 'Bocht Rechts ↪️', price: 15, lvl: 1 },
     { id: 'conveyor-curve-left', name: 'Bocht Links ↩️', price: 15, lvl: 1 },
@@ -75,7 +75,6 @@ const BUILDINGS = [
     { id: 'mixer', name: '🧪 Chemische Mixer', price: 300, lvl: 1 },
     { id: 'inleverpunt', name: '🏢 Inleverpunt (Max 3)', price: 100, lvl: 1 },
     
-    // Bronnen in periodiek systeem volgorde
     { id: 'source-h', name: '💧 H-Bron (Waterstof)', price: 100, lvl: 1 },
     { id: 'source-c', name: '🪨 C-Bron (Koolstof)', price: 400, lvl: 2 },
     { id: 'source-n', name: '💨 N-Bron (Stikstof)', price: 500, lvl: 2 },
@@ -202,6 +201,7 @@ function updateUI() {
         bpCard.classList.add('hidden');
     }
 
+    // Render Recepten & Markt Dynamic Prices
     const recipeContainer = document.getElementById('recipe-list');
     recipeContainer.innerHTML = '';
 
@@ -209,20 +209,35 @@ function updateUI() {
         const unlocked = r.lvl <= playerLevel;
         const reqStr = Object.entries(r.req).map(([el, cnt]) => `${cnt}x ${el}`).join(', ');
         
+        const priceDiff = r.currentValue - r.baseValue;
+        let trendIcon = '➡️';
+        let trendColor = 'text-gray-400';
+        if (priceDiff > 0) { trendIcon = '📈'; trendColor = 'text-green-400'; }
+        if (priceDiff < 0) { trendIcon = '📉'; trendColor = 'text-red-400'; }
+
         const card = document.createElement('div');
         card.className = `p-2.5 rounded border text-xs flex justify-between items-center transition cursor-pointer ${unlocked ? 'bg-gray-800/80 border-gray-700 hover:border-gray-500' : 'bg-gray-900/30 border-gray-800 opacity-40'}`;
         card.onclick = () => {
             if (unlocked) {
-                alert(`🧪 ${r.name} (${r.formula})\nOpbrengst: €${r.value.toLocaleString('nl-NL')}\nNodige grondstoffen: ${reqStr}`);
+                alert(`🧪 ${r.name} (${r.formula})\nActuele Marktwaarde: €${r.currentValue} (Basisprijs: €${r.baseValue})\nBereidingstijd: ${r.craftTicks * 0.4}s (${r.craftTicks} ticks)\nNodig: ${reqStr}`);
             }
         };
 
         card.innerHTML = `
             <div>
-                <div class="font-bold" style="color: ${unlocked ? r.color : '#888'}">${r.formula} - ${r.name}</div>
+                <div class="font-bold flex items-center gap-1.5" style="color: ${unlocked ? r.color : '#888'}">
+                    <span>${r.formula} - ${r.name}</span>
+                    <span class="text-[10px] text-gray-400 font-normal">(${r.craftTicks * 0.4}s)</span>
+                </div>
                 <div class="text-[10px] text-gray-400">${unlocked ? 'Nodig: ' + reqStr : 'Vereist Lvl ' + r.lvl}</div>
             </div>
-            <div class="font-black ${unlocked ? 'text-green-400' : 'text-gray-500'}">€${r.value.toLocaleString('nl-NL')}</div>
+            <div class="text-right">
+                <div class="font-black ${unlocked ? trendColor : 'text-gray-500'} flex items-center justify-end gap-1">
+                    <span>€${r.currentValue.toLocaleString('nl-NL')}</span>
+                    <span class="text-[10px]">${trendIcon}</span>
+                </div>
+                <div class="text-[9px] text-gray-500">Basis: €${r.baseValue}</div>
+            </div>
         `;
         recipeContainer.appendChild(card);
     });
@@ -368,7 +383,6 @@ function handleGridClick(x, y) {
         return;
     }
 
-    // ROTEREN VAN BANDEN OF BRONNEN BIJ KLIKKEN
     if (grid[key] && (grid[key].type.startsWith('conveyor') || grid[key].type === 'splitter' || grid[key].type.startsWith('source-'))) {
         if (selectedTool === 'cursor' || selectedTool === grid[key].type) {
             grid[key].obj.classList.remove(`dir-${grid[key].dir}`);
@@ -461,7 +475,9 @@ function buildEntityWithDirAndRecipe(x, y, type, dir, recipe = 'AUTO') {
         obj: el, 
         inventory: {},
         selectedRecipe: recipe,
-        splitToggle: 0
+        splitToggle: 0,
+        lastSpawnTime: 0,
+        craftingState: null // { recipe, progress, maxProgress }
     };
 
     el.classList.add(`dir-${dir}`);
@@ -469,7 +485,10 @@ function buildEntityWithDirAndRecipe(x, y, type, dir, recipe = 'AUTO') {
         const rec = RECIPES.find(r => r.id === recipe);
         const labelText = recipe === 'AUTO' ? 'AUTO' : (rec ? rec.formula : recipe);
         const labelColor = recipe === 'AUTO' ? '#88eaab' : (rec ? rec.color : '#ffffff');
-        el.innerHTML = `🧪<span class="mixer-label" id="label-${x}-${y}" style="color: ${labelColor}">${labelText}</span>`;
+        el.innerHTML = `
+            🧪<span class="mixer-label" id="label-${x}-${y}" style="color: ${labelColor}">${labelText}</span>
+            <div class="mixer-progress"><div class="mixer-progress-bar" id="pbar-${x}-${y}"></div></div>
+        `;
     } else if (type === 'inleverpunt') {
         el.innerText = '🏢';
     } else {
@@ -514,10 +533,10 @@ function openMixerModal(key) {
         btn.innerHTML = `
             <div>
                 <div class="font-bold" style="color: ${r.color}">${r.formula} - ${r.name}</div>
-                <div class="text-[10px] text-gray-400">Nodig: ${reqStr}</div>
+                <div class="text-[10px] text-gray-400">Tijd: ${r.craftTicks * 0.4}s | Nodig: ${reqStr}</div>
             </div>
             <div class="text-right">
-                <div class="text-green-400 font-bold">€${r.value.toLocaleString('nl-NL')}</div>
+                <div class="text-green-400 font-bold">€${r.currentValue.toLocaleString('nl-NL')}</div>
                 ${isSelected ? '<span class="text-amber-400 text-xs">✓ Actief</span>' : ''}
             </div>
         `;
@@ -531,6 +550,7 @@ function openMixerModal(key) {
 function setMixerRecipe(recipeId) {
     if (!activeMixerKey || !grid[activeMixerKey]) return;
     grid[activeMixerKey].selectedRecipe = recipeId;
+    grid[activeMixerKey].craftingState = null;
 
     const [x, y] = activeMixerKey.split(',').map(Number);
     const labelEl = document.getElementById(`label-${x}-${y}`);
@@ -571,14 +591,12 @@ function spawnItem(type, x, y) {
     gridContainer.appendChild(el);
 }
 
-// BEREKENT POSITIE VOOR ALLE 3 DE ITEMS OP DE BAND ACHTER ELKAAR EN OVERZICHTELIJK
 function updateVisualPosition(item, slotIndex = 0) {
     const cell = grid[`${item.x},${item.y}`];
     let dir = item.lastDir !== undefined ? item.lastDir : 1;
     if (cell && cell.dir !== undefined) dir = cell.dir;
 
     const dirVec = DIRS[dir];
-    // Slot 0 (vooraan = 24px uit midden), Slot 1 (midden = 15px), Slot 2 (achteraan = 6px)
     const slotOffset = (1 - slotIndex) * 11;
     const centerX = (item.x * CELL_SIZE) + 15;
     const centerY = (item.y * CELL_SIZE) + 15;
@@ -593,22 +611,63 @@ function updateVisualPosition(item, slotIndex = 0) {
 function triggerAnimation(entityObj, classCss) {
     if (!entityObj || !entityObj.obj) return;
     entityObj.obj.classList.remove(classCss);
-    void entityObj.obj.offsetWidth; // Force reflow
+    void entityObj.obj.offsetWidth;
     entityObj.obj.classList.add(classCss);
-    setTimeout(() => entityObj.obj.classList.remove(classCss), 500);
+    setTimeout(() => entityObj.obj.classList.remove(classCss), 300);
+}
+
+// DYNAMISCH MARKT SYSTEEM (VRAAG & AANBOD)
+function processItemSale(itemType) {
+    let value = ELEMENT_VALUES[itemType] || 0;
+    const recipe = RECIPES.find(r => r.id === itemType);
+
+    if (recipe) {
+        value = recipe.currentValue;
+
+        // Prijs daalt door aanbod! (tot minimaal 35% van basiswaarde)
+        const minPrice = Math.floor(recipe.baseValue * 0.35);
+        recipe.currentValue = Math.max(minPrice, Math.floor(recipe.currentValue * 0.96));
+    }
+
+    money += value;
+    updateUI();
+    return value;
+}
+
+function updateDynamicMarketPrices() {
+    // Stoffen herstellen geleidelijk in prijs als er schaarste is! (max 200% van basiswaarde)
+    RECIPES.forEach(recipe => {
+        const maxPrice = Math.floor(recipe.baseValue * 2.0);
+        if (recipe.currentValue < maxPrice) {
+            recipe.currentValue = Math.min(maxPrice, Math.floor(recipe.currentValue * 1.02) + 1);
+        }
+    });
+    updateUI();
 }
 
 function gameTick() {
-    // 1. BRONNEN PRODUCTIE (Slechts 1 vast uitgangspunt aangegeven met pijl)
+    tickCounter++;
+    const now = Date.now();
+
+    // Elke 15 ticks (~6 seconden) herstelt de markt geleidelijk door schaarste
+    if (tickCounter % 15 === 0) {
+        updateDynamicMarketPrices();
+    }
+
+    // 1. BRON PRODUCTIE MET EXACT 1 SECONDE COOLDOWN (1000ms)
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type.startsWith('source-')) {
-            const [x, y] = key.split(',').map(Number);
-            const elemType = entity.type.replace('source-', '').toUpperCase();
-            
-            const cellItems = items.filter(i => i.x === x && i.y === y);
-            if (cellItems.length < 3) {
-                spawnItem(elemType, x, y);
+            if (now - entity.lastSpawnTime >= 1000) {
+                const [x, y] = key.split(',').map(Number);
+                const elemType = entity.type.replace('source-', '').toUpperCase();
+                
+                const cellItems = items.filter(i => i.x === x && i.y === y);
+                if (cellItems.length < 3) {
+                    spawnItem(elemType, x, y);
+                    entity.lastSpawnTime = now;
+                    triggerAnimation(entity, 'anim-push');
+                }
             }
         }
     }
@@ -627,21 +686,10 @@ function gameTick() {
             let moveDirs = [];
             
             if (currentCell.type.startsWith('source-')) {
-                // BRON HEEFT SLECHTS 1 UITGANGSRICHTING (entity.dir)!
                 moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type === 'conveyor') {
+            } else if (currentCell.type.startsWith('conveyor')) {
                 moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type === 'conveyor-curve') {
-                moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type === 'conveyor-curve-left') {
-                moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type === 'conveyor-t') {
-                moveDirs = [ DIRS[currentCell.dir] ];
-            } else if (currentCell.type === 'conveyor-cross') {
-                // KRUISPUNT: item vervolgt de richting waar het vandaan kwam!
-                moveDirs = [ DIRS[item.lastDir !== undefined ? item.lastDir : currentCell.dir] ];
             } else if (currentCell.type === 'splitter') {
-                // SPLITSER: Wisselt af tussen Links en Rechts van de hoofdrichting!
                 const mainDir = currentCell.dir;
                 const outDir = (currentCell.splitToggle === 0) ? (mainDir + 3) % 4 : (mainDir + 1) % 4;
                 moveDirs = [ DIRS[outDir] ];
@@ -660,38 +708,25 @@ function gameTick() {
                         const maxCap = (nextCell.type.startsWith('conveyor') || nextCell.type === 'splitter') ? 3 : 1;
                         
                         if (itemsOnNextCell.length < maxCap) {
-                            // Bron animatie bij uitstoot!
-                            if (currentCell.type.startsWith('source-')) {
-                                triggerAnimation(currentCell, 'anim-push');
-                            }
-
-                            // Update item positie
                             item.x = nextX;
                             item.y = nextY;
                             item.lastDir = DIRS.findIndex(d => d.dx === dirVec.dx && d.dy === dirVec.dy);
                             item.movedThisTick = true;
 
-                            // Splitser toggle wisselen
                             if (currentCell.type === 'splitter') {
                                 currentCell.splitToggle = 1 - currentCell.splitToggle;
                             }
 
                             updateVisualPosition(item, itemsOnNextCell.length);
 
-                            // MIXER EN OPNAME ANIMATIE (ACCEPTEERT VAN MEERDERE KANTEN SIMULTAAN)
                             if (nextCell.type === 'mixer') {
                                 nextCell.inventory[item.type] = (nextCell.inventory[item.type] || 0) + 1;
                                 triggerAnimation(nextCell, 'anim-mix');
                                 itemsToRemove.push(item);
                             } else if (nextCell.type === 'inleverpunt') {
-                                let value = ELEMENT_VALUES[item.type] || 0;
-                                const rec = RECIPES.find(r => r.id === item.type);
-                                if (rec) value = rec.value;
-
-                                money += value;
-                                updateUI();
+                                const saleValue = processItemSale(item.type);
                                 triggerAnimation(nextCell, 'anim-sell');
-                                showFloatingText(nextKey, `+€${value.toLocaleString('nl-NL')}`, "#20bf6b");
+                                showFloatingText(nextKey, `+€${saleValue.toLocaleString('nl-NL')}`, "#20bf6b");
                                 itemsToRemove.push(item);
                             }
                             
@@ -703,7 +738,6 @@ function gameTick() {
         }
     });
 
-    // Herbereken visuele posities voor alle items zodat ze overzichtelijk op de band staan
     for (const key in grid) {
         const cellItems = items.filter(i => `${i.x},${i.y}` === key);
         cellItems.forEach((item, slotIndex) => {
@@ -711,44 +745,30 @@ function gameTick() {
         });
     }
 
-    // 3. MIXERS PROCESSING & PRODUCTIE
+    // 3. MIXERS MET VARIABELE BEREIDINGSTIJD VOOR GROTE & KLEINE RECEPTEN
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type === 'mixer') {
-            let targetRecipes = [];
+            const [mx, my] = key.split(',').map(Number);
+            const pbar = document.getElementById(`pbar-${mx}-${my}`);
 
-            if (entity.selectedRecipe && entity.selectedRecipe !== 'AUTO') {
-                const specificRecipe = RECIPES.find(r => r.id === entity.selectedRecipe);
-                if (specificRecipe && specificRecipe.lvl <= playerLevel) {
-                    targetRecipes = [specificRecipe];
-                }
-            } else {
-                targetRecipes = RECIPES.filter(r => r.lvl <= playerLevel)
-                    .sort((a, b) => b.value - a.value);
-            }
+            // Als mixer nog bezig is met craften:
+            if (entity.craftingState) {
+                entity.craftingState.progress++;
+                const pct = (entity.craftingState.progress / entity.craftingState.maxProgress) * 100;
+                if (pbar) pbar.style.width = `${pct}%`;
 
-            for (const recipe of targetRecipes) {
-                let canMake = true;
-                for (const [elem, count] of Object.entries(recipe.req)) {
-                    if ((entity.inventory[elem] || 0) < count) {
-                        canMake = false;
-                        break;
-                    }
-                }
-
-                if (canMake) {
-                    const [mx, my] = key.split(',').map(Number);
+                if (entity.craftingState.progress >= entity.craftingState.maxProgress) {
+                    const recipe = entity.craftingState.recipe;
                     let outputTarget = null;
 
                     for (const dir of DIRS) {
-                        const tx = mx + dir.dx;
-                        const ty = my + dir.dy;
+                        const tx = mx + dir.dx; ty = my + dir.dy;
                         const targetCell = grid[`${tx},${ty}`];
 
                         if (targetCell && (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter' || targetCell.type === 'inleverpunt' || targetCell.type === 'mixer')) {
                             const itemsOnTarget = items.filter(i => i.x === tx && i.y === ty);
                             const maxCap = (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter') ? 3 : 1;
-
                             if (itemsOnTarget.length < maxCap) {
                                 outputTarget = { x: tx, y: ty };
                                 break;
@@ -757,18 +777,13 @@ function gameTick() {
                     }
 
                     if (outputTarget) {
-                        for (const [elem, count] of Object.entries(recipe.req)) {
-                            entity.inventory[elem] -= count;
-                        }
-                        
                         const targetCell = grid[`${outputTarget.x},${outputTarget.y}`];
                         triggerAnimation(entity, 'anim-mix');
                         
                         if (targetCell.type === 'inleverpunt') {
-                            money += recipe.value;
-                            updateUI();
+                            const saleValue = processItemSale(recipe.id);
                             triggerAnimation(targetCell, 'anim-sell');
-                            showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+€${recipe.value.toLocaleString('nl-NL')}`, "#20bf6b");
+                            showFloatingText(`${outputTarget.x},${outputTarget.y}`, `+€${saleValue.toLocaleString('nl-NL')}`, "#20bf6b");
                         } else if (targetCell.type === 'mixer') {
                             targetCell.inventory[recipe.id] = (targetCell.inventory[recipe.id] || 0) + 1;
                             triggerAnimation(targetCell, 'anim-mix');
@@ -778,6 +793,38 @@ function gameTick() {
                         }
                         
                         showFloatingText(key, `🧪 ${recipe.formula}`, recipe.color);
+                        entity.craftingState = null;
+                        if (pbar) pbar.style.width = '0%';
+                    }
+                }
+            } else {
+                // Zoek naar nieuw recept dat gefabriceerd kan worden
+                let targetRecipes = [];
+                if (entity.selectedRecipe && entity.selectedRecipe !== 'AUTO') {
+                    const specificRecipe = RECIPES.find(r => r.id === entity.selectedRecipe);
+                    if (specificRecipe && specificRecipe.lvl <= playerLevel) targetRecipes = [specificRecipe];
+                } else {
+                    targetRecipes = RECIPES.filter(r => r.lvl <= playerLevel).sort((a, b) => b.currentValue - a.currentValue);
+                }
+
+                for (const recipe of targetRecipes) {
+                    let canMake = true;
+                    for (const [elem, count] of Object.entries(recipe.req)) {
+                        if ((entity.inventory[elem] || 0) < count) {
+                            canMake = false;
+                            break;
+                        }
+                    }
+
+                    if (canMake) {
+                        for (const [elem, count] of Object.entries(recipe.req)) {
+                            entity.inventory[elem] -= count;
+                        }
+                        entity.craftingState = {
+                            recipe: recipe,
+                            progress: 0,
+                            maxProgress: recipe.craftTicks
+                        };
                         break;
                     }
                 }
@@ -853,7 +900,7 @@ function showFloatingText(key, text, color) {
     el.style.pointerEvents = 'none';
     el.style.zIndex = '100';
     el.style.textShadow = '0px 2px 4px rgba(0,0,0,0.8)';
-    el.style.transition = 'all 1s ease-out';
+    el.style.transition = 'all 0.8s ease-out';
     el.innerText = text;
     
     gridContainer.appendChild(el);
@@ -865,7 +912,7 @@ function showFloatingText(key, text, color) {
 
     setTimeout(() => {
         if (el.parentNode) el.parentNode.removeChild(el);
-    }, 1050);
+    }, 850);
 }
 
 document.addEventListener('keydown', (e) => {
