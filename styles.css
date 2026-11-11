@@ -163,22 +163,35 @@ body {
 }
 .anim-sell { animation: anim-sell-bounce 0.35s ease-out; }
 
-/* Moving Items */
+/* Moving Items met Icoontje & Label */
 .item {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    font-size: 8px;
-    font-weight: 900;
     color: #121316;
     z-index: 10;
     transition: all 0.3s linear;
     pointer-events: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.7);
+    border: 1px solid rgba(255,255,255,0.4);
+    line-height: 1;
+}
+
+.item-icon {
+    font-size: 10px;
+    line-height: 1;
+}
+
+.item-text {
+    font-size: 7px;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: -1px;
 }
 
 /* UI Sidebar */
