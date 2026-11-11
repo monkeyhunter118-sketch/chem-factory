@@ -61,19 +61,19 @@ body {
 
 .conveyor.dir-0, .conveyor-curve.dir-0, .conveyor-curve-left.dir-0, .conveyor-t.dir-0, .splitter.dir-0 {
     background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
-    animation: belt-up 0.3s linear infinite;
+    animation: belt-up 0.6s linear infinite;
 }
 .conveyor.dir-1, .conveyor-curve.dir-1, .conveyor-curve-left.dir-1, .conveyor-t.dir-1, .splitter.dir-1 {
     background-image: repeating-linear-gradient(90deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
-    animation: belt-right 0.3s linear infinite;
+    animation: belt-right 0.6s linear infinite;
 }
 .conveyor.dir-2, .conveyor-curve.dir-2, .conveyor-curve-left.dir-2, .conveyor-t.dir-2, .splitter.dir-2 {
     background-image: repeating-linear-gradient(180deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
-    animation: belt-down 0.3s linear infinite;
+    animation: belt-down 0.6s linear infinite;
 }
 .conveyor.dir-3, .conveyor-curve.dir-3, .conveyor-curve-left.dir-3, .conveyor-t.dir-3, .splitter.dir-3 {
     background-image: repeating-linear-gradient(270deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
-    animation: belt-left 0.3s linear infinite;
+    animation: belt-left 0.6s linear infinite;
 }
 
 @keyframes belt-up { from { background-position: 0 0; } to { background-position: 0 -20px; } }
@@ -132,7 +132,7 @@ body {
     height: 100%;
     background-color: #20bf6b;
     width: 0%;
-    transition: width 0.1s linear;
+    transition: width 0.2s linear;
 }
 
 .inleverpunt { 
@@ -147,21 +147,21 @@ body {
     50% { transform: scale(1.15); filter: brightness(1.4); }
     100% { transform: scale(1); }
 }
-.anim-push { animation: anim-source-pulse 0.25s ease-out; }
+.anim-push { animation: anim-source-pulse 0.35s ease-out; }
 
 @keyframes anim-mixer-craft {
     0% { transform: scale(1) rotate(0deg); }
     50% { transform: scale(1.1) rotate(8deg); border-color: #55efc4; box-shadow: 0 0 10px rgba(32,191,107,0.8); }
     100% { transform: scale(1) rotate(0deg); }
 }
-.anim-mix { animation: anim-mixer-craft 0.3s ease-in-out; }
+.anim-mix { animation: anim-mixer-craft 0.4s ease-in-out; }
 
 @keyframes anim-sell-bounce {
     0% { transform: scale(1); }
     50% { transform: scale(1.15); border-color: #ffeaa7; box-shadow: 0 0 12px rgba(247,183,49,0.9); }
     100% { transform: scale(1); }
 }
-.anim-sell { animation: anim-sell-bounce 0.25s ease-out; }
+.anim-sell { animation: anim-sell-bounce 0.35s ease-out; }
 
 /* Moving Items */
 .item {
@@ -176,7 +176,7 @@ body {
     font-weight: 900;
     color: #121316;
     z-index: 10;
-    transition: all 0.15s linear;
+    transition: all 0.3s linear;
     pointer-events: none;
     box-shadow: 0 2px 4px rgba(0,0,0,0.6);
 }
