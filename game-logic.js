@@ -1,8 +1,6 @@
 // GRID & SPEL STATUS VARIABLES
 let GRID_WIDTH = Math.floor((window.innerWidth - 340) / CELL_SIZE) * 3;
-// Speelveld 2x zo hoog
-let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE) * 6; 
-let unlockedRows = Math.floor(GRID_HEIGHT / 2); // Helft van het veld is vrij in het begin
+let GRID_HEIGHT = Math.floor(window.innerHeight / CELL_SIZE) * 3;
 
 let money = 1000;
 let playerLevel = 1;
@@ -24,6 +22,7 @@ const grid = {};
 let items = []; 
 let itemIdCounter = 0;
 
+// ITEM TRANSPORTEREN & VISUELE POSITIE BEREKENINGEN
 function updateVisualPosition(item, slotIndex = 0) {
     const cell = grid[`${item.x},${item.y}`];
     let dir = item.lastDir !== undefined ? item.lastDir : 1;
@@ -67,19 +66,14 @@ function triggerAnimation(entityObj, classCss) {
     setTimeout(() => entityObj.obj.classList.remove(classCss), 350);
 }
 
-// BEREKENINGSLOGICA - MARKT STABILISATIE TOEGEVOEGD
+// MARKT- EN BEREKENINGSLOGICA
 function processItemSale(itemType) {
     let value = ELEMENT_VALUES[itemType] || 0;
     const recipe = RECIPES.find(r => r.id === itemType);
 
     if (recipe) {
         value = recipe.currentValue;
-        // Check of de laatste verkoop langer dan 10 ticks geleden is
-        if (!recipe.lastSoldTick || tickCounter - recipe.lastSoldTick >= 10) {
-            recipe.currentValue = Math.max(recipe.minPrice, Math.floor(recipe.currentValue * 0.95));
-        }
-        // Update ALTIJD de verkoop tick, zodat meerdere items achter elkaar de prijs niet instorten
-        recipe.lastSoldTick = tickCounter; 
+        recipe.currentValue = Math.max(recipe.minPrice, Math.floor(recipe.currentValue * 0.95));
     }
 
     money += value;
@@ -99,13 +93,16 @@ function updateDynamicMarketPrices() {
     updateUI();
 }
 
-// HOOFDTICK LUS
+// HOOFDTICK LUS FOR ENGINE & MIXERS
 function gameTick() {
     tickCounter++;
     const now = Date.now();
 
-    if (tickCounter % 8 === 0) updateDynamicMarketPrices();
+    if (tickCounter % 8 === 0) {
+        updateDynamicMarketPrices();
+    }
 
+    // 1. Bron spawner cooldown (2000ms)
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type.startsWith('source-')) {
@@ -126,6 +123,7 @@ function gameTick() {
     items.forEach(i => i.movedThisTick = false);
     const itemsToRemove = [];
 
+    // 2. Transport over lopende banden en splitsers
     items.forEach(item => {
         if (item.movedThisTick) return;
 
@@ -135,7 +133,6 @@ function gameTick() {
         if (currentCell) {
             let moveDirs = [];
             
-            // Mixers doen zelf geen transport van items die al IN de cel liggen (die zitten in de inventory)
             if (currentCell.type.startsWith('source-') || currentCell.type.startsWith('conveyor')) {
                 moveDirs = [ DIRS[currentCell.dir] ];
             } else if (currentCell.type === 'splitter') {
@@ -150,7 +147,7 @@ function gameTick() {
                 const nextKey = `${nextX},${nextY}`;
                 const nextCell = grid[nextKey];
 
-                if (nextX >= 0 && nextX < GRID_WIDTH && nextY >= 0 && nextY < unlockedRows) {
+                if (nextX >= 0 && nextX < GRID_WIDTH && nextY >= 0 && nextY < GRID_HEIGHT) {
                     if (nextCell && (nextCell.type.startsWith('conveyor') || nextCell.type === 'splitter' || nextCell.type.startsWith('mixer') || nextCell.type === 'inleverpunt')) {
                         
                         const itemsOnNextCell = items.filter(i => i.x === nextX && i.y === nextY);
@@ -162,7 +159,9 @@ function gameTick() {
                             item.lastDir = DIRS.findIndex(d => d.dx === dirVec.dx && d.dy === dirVec.dy);
                             item.movedThisTick = true;
 
-                            if (currentCell.type === 'splitter') currentCell.splitToggle = 1 - currentCell.splitToggle;
+                            if (currentCell.type === 'splitter') {
+                                currentCell.splitToggle = 1 - currentCell.splitToggle;
+                            }
 
                             updateVisualPosition(item, itemsOnNextCell.length);
 
@@ -189,7 +188,7 @@ function gameTick() {
         cellItems.forEach((item, slotIndex) => updateVisualPosition(item, slotIndex));
     }
 
-    // 3. Chemische Mixers bereiding - MET VASTE UITGANG
+    // 3. Chemische Mixers bereiding
     for (const key in grid) {
         const entity = grid[key];
         if (entity.type.startsWith('mixer')) {
@@ -205,23 +204,22 @@ function gameTick() {
                     const recipe = entity.craftingState.recipe;
                     let outputTarget = null;
 
-                    // KIJKT NU ALLEEN NAAR DE RICHTING VAN DE MIXER (entity.dir)
-                    const dirVec = DIRS[entity.dir];
-                    const tx = mx + dirVec.dx; 
-                    const ty = my + dirVec.dy;
-                    const targetCell = grid[`${tx},${ty}`];
+                    for (const dir of DIRS) {
+                        const tx = mx + dir.dx; ty = my + dir.dy;
+                        const targetCell = grid[`${tx},${ty}`];
 
-                    if (tx >= 0 && tx < GRID_WIDTH && ty >= 0 && ty < unlockedRows) {
                         if (targetCell && (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter' || targetCell.type === 'inleverpunt' || targetCell.type.startsWith('mixer'))) {
                             const itemsOnTarget = items.filter(i => i.x === tx && i.y === ty);
                             const maxCap = (targetCell.type.startsWith('conveyor') || targetCell.type === 'splitter') ? 3 : 1;
                             if (itemsOnTarget.length < maxCap) {
                                 outputTarget = { x: tx, y: ty };
+                                break;
                             }
                         }
                     }
 
                     if (outputTarget) {
+                        const targetCell = grid[`${outputTarget.x},${outputTarget.y}`];
                         triggerAnimation(entity, 'anim-mix');
                         
                         if (targetCell.type === 'inleverpunt') {
@@ -278,4 +276,43 @@ function gameTick() {
     });
 }
 
-// REST VAN JE GAME-LOGIC BLIJFT HETZELFDE (sellEntireFactory, upgradeLevel, etc.)
+function sellEntireFactory() {
+    let totalRefund = 0;
+    for (const key in grid) {
+        const entity = grid[key];
+        const buildingDef = BUILDINGS.find(b => b.id === entity.type);
+        if (buildingDef && buildingDef.price > 0) totalRefund += buildingDef.price;
+        if (entity.obj && entity.obj.parentNode) entity.obj.parentNode.removeChild(entity.obj);
+        delete grid[key];
+    }
+    items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
+    items = [];
+    money += totalRefund;
+    updateUI();
+
+    const centerX = Math.floor((window.innerWidth - 340) / (2 * CELL_SIZE));
+    const centerY = Math.floor(window.innerHeight / (2 * CELL_SIZE));
+    showFloatingText(`${centerX},${centerY}`, `🏢 FABRIEK VERKOCHT (+€${totalRefund.toLocaleString('nl-NL')})`, "#fbc531");
+}
+
+function upgradeLevel() {
+    const cost = LEVEL_CONFIG[playerLevel] ? LEVEL_CONFIG[playerLevel].costNext : 500000;
+    if (money >= cost) {
+        money -= cost;
+        playerLevel++;
+        for (const key in grid) {
+            if (grid[key].obj && grid[key].obj.parentNode) grid[key].obj.parentNode.removeChild(grid[key].obj);
+            delete grid[key];
+        }
+        items.forEach(i => { if (i.visual && i.visual.parentNode) i.visual.parentNode.removeChild(i.visual); });
+        items = [];
+        money += 1000;
+        updateUI();
+        
+        const centerX = Math.floor((window.innerWidth - 340) / (2 * CELL_SIZE));
+        const centerY = Math.floor(window.innerHeight / (2 * CELL_SIZE));
+        showFloatingText(`${centerX},${centerY}`, `🚀 FABRIEK GEÜPGRADED NAAR LVL ${playerLevel}!`, "#fbc531");
+    } else {
+        alert("Niet genoeg saldo om je fabriek te upgraden!");
+    }
+}
