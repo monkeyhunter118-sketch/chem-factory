@@ -2,115 +2,169 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mega Chemie Fabriek - Multi-Tier Edition</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="styles.css">
+    <title>De Chem Fabriek</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        /* Het speelveld is hier extra hoog gemaakt (800px) */
+        .game-container {
+            background-color: #34495e;
+            width: 600px;
+            height: 800px; 
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            margin: 0;
+            color: #1abc9c;
+        }
+        .sectie {
+            background-color: #2c3e50;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #1abc9c;
+        }
+        button {
+            background-color: #1abc9c;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #16a085;
+        }
+        input {
+            padding: 8px;
+            width: 80%;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: none;
+        }
+    </style>
 </head>
 <body>
-    <div id="game-container">
-        <!-- Grid Canvas -->
-        <div id="grid-container"></div>
 
-        <!-- Sidebar Dashboard -->
-        <div id="ui-panel" class="p-4 flex flex-col h-full">
-            <!-- Header & Level -->
-            <div class="border-b border-gray-700 pb-3 mb-3">
-                <div class="flex justify-between items-center mb-1">
-                    <h1 class="text-xl font-black text-amber-400 tracking-wide">🏭 CHEM FABRIEK</h1>
-                    <span id="level-badge" class="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded border border-amber-500/40 font-bold">Lvl 1</span>
-                </div>
-                <p id="level-title" class="text-xs text-gray-400">Basis Chemie (H₂O)</p>
-            </div>
-
-            <!-- Stats, Level Upgrade & Sell Factory -->
-            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-800 mb-3 space-y-2">
-                <div>
-                    <div class="text-xs text-gray-400 uppercase font-semibold">Saldo</div>
-                    <div class="text-2xl font-black text-green-400" id="money-display">€ 1.000</div>
-                </div>
-                
-                <button id="btn-upgrade-level" onclick="upgradeLevel()" class="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs rounded transition flex justify-between items-center shadow-lg">
-                    <span>🚀 Herbouw Fabriek (Lvl <span id="next-level-num">2</span>)</span>
-                    <span id="next-level-cost">€ 1.500</span>
-                </button>
-
-                <button id="btn-sell-factory" onclick="sellEntireFactory()" class="w-full py-1.5 px-3 bg-red-900/50 hover:bg-red-800/70 border border-red-700/60 text-red-200 font-bold text-xs rounded transition flex justify-between items-center">
-                    <span>🧹 Verkoop Fabriek (Grid Ontruimen)</span>
-                    <span class="text-[10px] bg-red-950 px-1.5 py-0.5 rounded text-red-300">100% Refund</span>
-                </button>
-            </div>
-
-            <!-- TABBLAD NAVIGATIE -->
-            <div class="flex border-b border-gray-700 mb-3 bg-gray-900/50 rounded-t p-1 gap-1">
-                <button id="tab-btn-build" onclick="switchTab('build')" class="tab-btn active flex-1 py-1.5 text-xs font-bold rounded text-amber-400 bg-gray-800 border border-gray-700 transition">
-                    🔨 Gebouwen & Bronnen
-                </button>
-                <button id="tab-btn-recipes" onclick="switchTab('recipes')" class="tab-btn flex-1 py-1.5 text-xs font-bold rounded text-gray-400 hover:text-gray-200 transition">
-                    🧪 Markt & Recepten
-                </button>
-            </div>
-
-            <!-- TAB INHOUD -->
-            <div class="flex-grow overflow-y-auto space-y-4 pr-1">
-                <!-- TAB 1: GEBOUWEN & BRONNEN -->
-                <div id="tab-content-build" class="space-y-3">
-                    <div id="blueprint-status-card" class="bg-blue-950/40 border border-blue-800/60 p-2.5 rounded-lg text-xs hidden">
-                        <div class="flex justify-between items-center font-bold text-blue-300 mb-1">
-                            <span>📋 Blauwdruk Actief</span>
-                            <button onclick="resetBlueprint()" class="text-[10px] text-red-400 hover:underline">Wissen</button>
-                        </div>
-                        <p id="blueprint-status-text" class="text-[11px] text-gray-300">Gebouwen bewaard. Klik op het grid om te plaatsen.</p>
-                    </div>
-
-                    <div class="space-y-1.5" id="build-buttons">
-                        <!-- Dynamisch gevuld door JS -->
-                    </div>
-                </div>
-
-                <!-- TAB 2: RECEPTEN & MARKTWAARDE -->
-                <div id="tab-content-recipes" class="space-y-2 hidden">
-                    <div class="flex justify-between items-center mb-2">
-                        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400">📈 Dynamische Markt</h2>
-                        <span class="text-[10px] text-amber-400 font-semibold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">Vraag & Aanbod</span>
-                    </div>
-                    <div class="space-y-1.5" id="recipe-list">
-                        <!-- Dynamisch gevuld door JS -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer / Controls Info -->
-            <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 space-y-1">
-                <p>💡 <b>Sneltoetsen:</b> [R] Draaien | [X] Verwijderen 🗑️</p>
-                <p>🧪 <b>Mixers:</b> Mk1 (Standaard), Mk2 (Snel), Mk3 (Superfast)</p>
-            </div>
-        </div>
+<div class="game-container">
+    <h1>De Chem Fabriek</h1>
+    
+    <div class="sectie">
+        <h2>Inventaris</h2>
+        <p><strong>Geld:</strong> €<span id="geld">100</span></p>
+        <p><strong>Grondstoffen:</strong> Waterstof (H): <span id="H">0</span> | Zuurstof (O): <span id="O">0</span> | Natrium (Na): <span id="Na">0</span> | Chloor (Cl): <span id="Cl">0</span></p>
+        <p><strong>Producten:</strong> Water (H2O): <span id="H2O">0</span> | Keukenzout (NaCl): <span id="NaCl">0</span></p>
     </div>
 
-    <!-- Modal voor Mixer Recept Selectie -->
-    <div id="mixer-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center hidden z-[1000]">
-        <div class="bg-gray-900 border border-gray-700 rounded-xl p-5 w-96 max-h-[80vh] flex flex-col shadow-2xl">
-            <div class="flex justify-between items-center pb-3 border-b border-gray-800 mb-3">
-                <h3 class="font-bold text-lg text-amber-400 flex items-center gap-2">🧪 Mixer Recept Kiezen</h3>
-                <button onclick="closeMixerModal()" class="text-gray-400 hover:text-white text-xl font-bold px-2">&times;</button>
-            </div>
-            
-            <p class="text-xs text-gray-400 mb-3">Kies welke stof deze mixer moet produceren:</p>
-            
-            <div id="modal-recipe-options" class="flex-grow overflow-y-auto space-y-2 pr-1">
-                <!-- Dynamisch gevuld door JS -->
-            </div>
-
-            <button onclick="closeMixerModal()" class="mt-4 w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-semibold text-xs transition">
-                Sluiten
-            </button>
-        </div>
+    <div class="sectie">
+        <h2>Winkel (Koop Grondstoffen)</h2>
+        <button onclick="koop('H', 10)">Koop H (€10)</button>
+        <button onclick="koop('O', 15)">Koop O (€15)</button>
+        <button onclick="koop('Na', 20)">Koop Na (€20)</button>
+        <button onclick="koop('Cl', 20)">Koop Cl (€20)</button>
     </div>
 
-    <!-- INLADEN VAN DE 3 JAVASCRIPT BESTANDEN IN DE JUISTE VOLGORDE -->
-    <script src="config.js"></script>
-    <script src="game-logic.js"></script>
-    <script src="ui-controller.js"></script>
+    <div class="sectie">
+        <h2>Chemische Mixer</h2>
+        <p>Typ de juiste scheikundige vergelijking om producten te maken.<br>
+        <em>Hints: "2H + O -> H2O" of "Na + Cl -> NaCl"</em></p>
+        <input type="text" id="reactieInput" placeholder="Bijv: 2H + O -> H2O">
+        <br>
+        <button onclick="mix()">Voer Reactie Uit!</button>
+        <p id="mixBericht" style="color: #f1c40f;"></p>
+    </div>
+
+    <div class="sectie">
+        <h2>Markt (Verkoop Producten)</h2>
+        <button onclick="verkoop('H2O', 50)">Verkoop Water (€50)</button>
+        <button onclick="verkoop('NaCl', 80)">Verkoop Keukenzout (€80)</button>
+    </div>
+</div>
+
+<script>
+    // Spel variabelen
+    let geld = 100;
+    let inv = { H: 0, O: 0, Na: 0, Cl: 0, H2O: 0, NaCl: 0 };
+
+    // Update het scherm
+    function updateUI() {
+        document.getElementById('geld').innerText = geld;
+        document.getElementById('H').innerText = inv.H;
+        document.getElementById('O').innerText = inv.O;
+        document.getElementById('Na').innerText = inv.Na;
+        document.getElementById('Cl').innerText = inv.Cl;
+        document.getElementById('H2O').innerText = inv.H2O;
+        document.getElementById('NaCl').innerText = inv.NaCl;
+    }
+
+    // Grondstoffen kopen
+    function koop(element, prijs) {
+        if (geld >= prijs) {
+            geld -= prijs;
+            inv[element]++;
+            updateUI();
+        } else {
+            alert("Niet genoeg geld!");
+        }
+    }
+
+    // Producten verkopen
+    function verkoop(product, prijs) {
+        if (inv[product] > 0) {
+            inv[product]--;
+            geld += prijs;
+            updateUI();
+        } else {
+            alert("Je hebt dit product niet!");
+        }
+    }
+
+    // Zelf een vergelijking maken
+    function mix() {
+        let input = document.getElementById('reactieInput').value;
+        // Verwijder alle spaties om makkelijker te controleren
+        let schoneInput = input.replace(/\s/g, '');
+        let bericht = document.getElementById('mixBericht');
+
+        if (schoneInput === '2H+O->H2O') {
+            if (inv.H >= 2 && inv.O >= 1) {
+                inv.H -= 2;
+                inv.O -= 1;
+                inv.H2O += 1;
+                bericht.innerText = "Succes! Je hebt Water (H2O) gemaakt.";
+            } else {
+                bericht.innerText = "Mislukt: Je hebt niet genoeg H (2 nodig) of O (1 nodig).";
+            }
+        } 
+        else if (schoneInput === 'Na+Cl->NaCl') {
+            if (inv.Na >= 1 && inv.Cl >= 1) {
+                inv.Na -= 1;
+                inv.Cl -= 1;
+                inv.NaCl += 1;
+                bericht.innerText = "Succes! Je hebt Keukenzout (NaCl) gemaakt.";
+            } else {
+                bericht.innerText = "Mislukt: Je hebt niet genoeg Na of Cl (van beide 1 nodig).";
+            }
+        } 
+        else {
+            bericht.innerText = "Ongeldige reactie! Controleer je formule en de pijl (->).";
+        }
+        updateUI();
+    }
+</script>
+
 </body>
 </html>
