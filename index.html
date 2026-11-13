@@ -2,281 +2,103 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Chem Fabriek - Factorio Editie</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c3e50;
-            color: white;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-            gap: 20px;
-        }
-        canvas {
-            background-color: #34495e;
-            border: 3px solid #1abc9c;
-            border-radius: 5px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-        }
-        .ui-panel {
-            background-color: #34495e;
-            width: 300px;
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #1abc9c;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-height: 800px;
-            overflow-y: auto;
-        }
-        h2 {
-            margin-top: 0;
-            color: #1abc9c;
-            font-size: 1.2em;
-            border-bottom: 1px solid #1abc9c;
-            padding-bottom: 5px;
-        }
-        button {
-            background-color: #1abc9c;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-            margin-bottom: 5px;
-            transition: background-color 0.2s;
-        }
-        button:hover { background-color: #16a085; }
-        .actief { background-color: #e67e22 !important; }
-        
-        /* Het nieuwe mixer paneel in de zijbalk */
-        #mixerPaneel {
-            display: none; /* Standaard verborgen */
-            background-color: #2c3e50;
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px dashed #f1c40f;
-            margin-top: 10px;
-        }
-        #mixerPaneel input {
-            padding: 8px;
-            width: 90%;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: none;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mega Chemie Fabriek - Land Expansion & Stable Market</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="game-container">
+        <!-- Grid Canvas -->
+        <div id="grid-container"></div>
 
-<canvas id="gameCanvas" width="600" height="800"></canvas>
+        <!-- Sidebar Dashboard -->
+        <div id="ui-panel" class="p-4 flex flex-col h-full">
+            <div class="border-b border-gray-700 pb-3 mb-3">
+                <div class="flex justify-between items-center mb-1">
+                    <h1 class="text-xl font-black text-amber-400 tracking-wide">🏭 CHEM FABRIEK</h1>
+                    <span id="level-badge" class="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded border border-amber-500/40 font-bold">Lvl 1</span>
+                </div>
+                <p id="level-title" class="text-xs text-gray-400">Basis Chemie (H₂O)</p>
+            </div>
 
-<div class="ui-panel">
-    <h2>Inventaris</h2>
-    <p><strong>Geld:</strong> €<span id="geld">100</span></p>
-    <p><strong>Grondstoffen:</strong><br>
-       H: <span id="inv_H">0</span> | O: <span id="inv_O">0</span><br>
-       Na: <span id="inv_Na">0</span> | Cl: <span id="inv_Cl">0</span></p>
-    <p><strong>Producten:</strong><br>
-       H2O (Water): <span id="inv_H2O">0</span><br>
-       NaCl (Zout): <span id="inv_NaCl">0</span></p>
-    
-    <!-- Dit paneel verschijnt alleen als je bij een mixer staat -->
-    <div id="mixerPaneel">
-        <h2 style="color: #f1c40f; border-color: #f1c40f;">Actieve Mixer</h2>
-        <p style="font-size: 0.9em;">Voer vergelijking in (bijv. 2H + O -> H2O):</p>
-        <input type="text" id="reactieInput" placeholder="Jouw formule...">
-        <button onclick="probeerMix()" style="background-color: #f1c40f; color: #2c3e50;">Mix Product</button>
-        <p id="mixBericht" style="font-size: 0.9em; font-weight: bold; margin-bottom: 0;"></p>
+            <!-- Stats, Level Upgrade & Sell Factory -->
+            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-800 mb-3 space-y-2">
+                <div>
+                    <div class="text-xs text-gray-400 uppercase font-semibold">Saldo</div>
+                    <div class="text-2xl font-black text-green-400" id="money-display">€ 1.000</div>
+                </div>
+                
+                <button id="btn-upgrade-level" onclick="upgradeLevel()" class="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs rounded transition flex justify-between items-center shadow-lg">
+                    <span>🚀 Herbouw Fabriek (Lvl <span id="next-level-num">2</span>)</span>
+                    <span id="next-level-cost">€ 1.500</span>
+                </button>
+
+                <button id="btn-sell-factory" onclick="sellEntireFactory()" class="w-full py-1.5 px-3 bg-red-900/50 hover:bg-red-800/70 border border-red-700/60 text-red-200 font-bold text-xs rounded transition flex justify-between items-center">
+                    <span>🧹 Verkoop Fabriek (Grid Ontruimen)</span>
+                    <span class="text-[10px] bg-red-950 px-1.5 py-0.5 rounded text-red-300">100% Refund</span>
+                </button>
+            </div>
+
+            <!-- TABBLAD NAVIGATIE -->
+            <div class="flex border-b border-gray-700 mb-3 bg-gray-900/50 rounded-t p-1 gap-1">
+                <button id="tab-btn-build" onclick="switchTab('build')" class="tab-btn active flex-1 py-1.5 text-xs font-bold rounded text-amber-400 bg-gray-800 border border-gray-700 transition">
+                    🔨 Gebouwen & Bronnen
+                </button>
+                <button id="tab-btn-recipes" onclick="switchTab('recipes')" class="tab-btn flex-1 py-1.5 text-xs font-bold rounded text-gray-400 hover:text-gray-200 transition">
+                    🧪 Markt & Recepten
+                </button>
+            </div>
+
+            <!-- TAB INHOUD -->
+            <div class="flex-grow overflow-y-auto space-y-4 pr-1">
+                <div id="tab-content-build" class="space-y-3">
+                    <div id="blueprint-status-card" class="bg-blue-950/40 border border-blue-800/60 p-2.5 rounded-lg text-xs hidden">
+                        <div class="flex justify-between items-center font-bold text-blue-300 mb-1">
+                            <span>📋 Blauwdruk Actief</span>
+                            <button onclick="resetBlueprint()" class="text-[10px] text-red-400 hover:underline">Wissen</button>
+                        </div>
+                        <p id="blueprint-status-text" class="text-[11px] text-gray-300">Gebouwen bewaard. Klik op het grid om te plaatsen.</p>
+                    </div>
+                    <div class="space-y-1.5" id="build-buttons"></div>
+                </div>
+
+                <div id="tab-content-recipes" class="space-y-2 hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400">📈 Dynamische Markt</h2>
+                        <span class="text-[10px] text-amber-400 font-semibold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">Vraag & Aanbod</span>
+                    </div>
+                    <div class="space-y-1.5" id="recipe-list"></div>
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 space-y-1">
+                <p>💡 <b>Sneltoetsen:</b> [R] Draaien | [X] Verwijderen 🗑️</p>
+                <p>🌍 <b>Grond:</b> Klik op slotjes (🔒) om land bij te kopen.</p>
+            </div>
+        </div>
     </div>
 
-    <h2>Bouwen</h2>
-    <p style="font-size:0.85em; margin-bottom: 5px;">Selecteer en klik op de map.</p>
-    <button id="btnMiner" onclick="zetBouwModus('miner')">Bouw Miner (€50)</button>
-    <button id="btnMixer" onclick="zetBouwModus('mixer')">Bouw Mixer (€100)</button>
+    <!-- Modal voor Mixer Recept Selectie -->
+    <div id="mixer-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center hidden z-[1000]">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl p-5 w-96 max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center pb-3 border-b border-gray-800 mb-3">
+                <h3 class="font-bold text-lg text-amber-400 flex items-center gap-2">🧪 Mixer Recept Kiezen</h3>
+                <button onclick="closeMixerModal()" class="text-gray-400 hover:text-white text-xl font-bold px-2">&times;</button>
+            </div>
+            
+            <p class="text-xs text-gray-400 mb-3">Kies welke stof deze mixer moet produceren:</p>
+            <div id="modal-recipe-options" class="flex-grow overflow-y-auto space-y-2 pr-1"></div>
 
-    <h2>Markt</h2>
-    <button onclick="verkoop('H2O', 50)">Verkoop Water (€50)</button>
-    <button onclick="verkoop('NaCl', 80)">Verkoop Zout (€80)</button>
+            <button onclick="closeMixerModal()" class="mt-4 w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-semibold text-xs transition">
+                Sluiten
+            </button>
+        </div>
+    </div>
 
-    <h2>Besturing</h2>
-    <ul style="font-size: 0.85em; padding-left: 20px; margin-top: 0;">
-        <li>WASD of Pijltjes om te lopen</li>
-        <li>Loop naar een rode Mixer om het bedieningspaneel te openen.</li>
-    </ul>
-</div>
-
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // Spel Data
-    let inv = { geld: 100, H: 0, O: 0, Na: 0, Cl: 0, H2O: 0, NaCl: 0 };
-    let speler = { x: 300, y: 400, grootte: 20, snelheid: 4 };
-    let toetsen = {};
-    let gebouwen = [];
-    let bouwModus = null;
-
-    // Grondstof bronnen
-    let bronnen = [
-        { type: 'H', x: 50, y: 50, w: 100, h: 100, kleur: '#3498db' },
-        { type: 'O', x: 400, y: 100, w: 100, h: 100, kleur: '#9b59b6' },
-        { type: 'Na', x: 100, y: 550, w: 100, h: 100, kleur: '#f1c40f' },
-        { type: 'Cl', x: 400, y: 600, w: 100, h: 100, kleur: '#2ecc71' }
-    ];
-
-    function updateUI() {
-        document.getElementById('geld').innerText = inv.geld;
-        document.getElementById('inv_H').innerText = inv.H;
-        document.getElementById('inv_O').innerText = inv.O;
-        document.getElementById('inv_Na').innerText = inv.Na;
-        document.getElementById('inv_Cl').innerText = inv.Cl;
-        document.getElementById('inv_H2O').innerText = inv.H2O;
-        document.getElementById('inv_NaCl').innerText = inv.NaCl;
-    }
-
-    function verkoop(product, prijs) {
-        if (inv[product] > 0) {
-            inv[product]--;
-            inv.geld += prijs;
-            updateUI();
-        }
-    }
-
-    function zetBouwModus(type) {
-        bouwModus = type;
-        document.getElementById('btnMiner').classList.remove('actief');
-        document.getElementById('btnMixer').classList.remove('actief');
-        if(type) {
-            document.getElementById(type === 'miner' ? 'btnMiner' : 'btnMixer').classList.add('actief');
-        }
-    }
-
-    canvas.addEventListener('mousedown', (e) => {
-        if (!bouwModus) return;
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        if (bouwModus === 'miner' && inv.geld >= 50) {
-            inv.geld -= 50;
-            gebouwen.push({ type: 'miner', x: x - 15, y: y - 15, size: 30 });
-        } else if (bouwModus === 'mixer' && inv.geld >= 100) {
-            inv.geld -= 100;
-            gebouwen.push({ type: 'mixer', x: x - 25, y: y - 25, size: 50 });
-        }
-        zetBouwModus(null);
-        updateUI();
-    });
-
-    window.addEventListener('keydown', e => toetsen[e.code] = true);
-    window.addEventListener('keyup', e => toetsen[e.code] = false);
-
-    function probeerMix() {
-        let input = document.getElementById('reactieInput').value.replace(/\s/g, '');
-        let bericht = document.getElementById('mixBericht');
-
-        if (input === '2H+O->H2O') {
-            if (inv.H >= 2 && inv.O >= 1) {
-                inv.H -= 2; inv.O -= 1; inv.H2O += 1;
-                bericht.innerText = "Succes: H2O gemaakt!";
-                bericht.style.color = "#2ecc71";
-            } else {
-                bericht.innerText = "Te weinig H of O!";
-                bericht.style.color = "#e74c3c";
-            }
-        } 
-        else if (input === 'Na+Cl->NaCl') {
-            if (inv.Na >= 1 && inv.Cl >= 1) {
-                inv.Na -= 1; inv.Cl -= 1; inv.NaCl += 1;
-                bericht.innerText = "Succes: NaCl gemaakt!";
-                bericht.style.color = "#2ecc71";
-            } else {
-                bericht.innerText = "Te weinig Na of Cl!";
-                bericht.style.color = "#e74c3c";
-            }
-        } 
-        else {
-            bericht.innerText = "Ongeldige reactie!";
-            bericht.style.color = "#e74c3c";
-        }
-        updateUI();
-    }
-
-    setInterval(() => {
-        gebouwen.forEach(b => {
-            if (b.type === 'miner') {
-                let bron = bronnen.find(r => 
-                    b.x + b.size/2 > r.x && b.x + b.size/2 < r.x + r.w &&
-                    b.y + b.size/2 > r.y && b.y + b.size/2 < r.y + r.h
-                );
-                if (bron) inv[bron.type]++;
-            }
-        });
-        updateUI();
-    }, 1000);
-
-    function gameLoop() {
-        if ((toetsen['KeyW'] || toetsen['ArrowUp']) && speler.y > 0) speler.y -= speler.snelheid;
-        if ((toetsen['KeyS'] || toetsen['ArrowDown']) && speler.y < canvas.height) speler.y += speler.snelheid;
-        if ((toetsen['KeyA'] || toetsen['ArrowLeft']) && speler.x > 0) speler.x -= speler.snelheid;
-        if ((toetsen['KeyD'] || toetsen['ArrowRight']) && speler.x < canvas.width) speler.x += speler.snelheid;
-
-        // Controleer of speler bij een mixer staat om het menu te tonen
-        let bijMixer = gebouwen.find(b => b.type === 'mixer' && 
-            Math.hypot((b.x + b.size/2) - speler.x, (b.y + b.size/2) - speler.y) < 60);
-        
-        document.getElementById('mixerPaneel').style.display = bijMixer ? 'block' : 'none';
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
-        for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
-
-        bronnen.forEach(r => {
-            ctx.fillStyle = r.kleur;
-            ctx.globalAlpha = 0.5;
-            ctx.fillRect(r.x, r.y, r.w, r.h);
-            ctx.globalAlpha = 1.0;
-            ctx.fillStyle = "white";
-            ctx.font = "20px Arial";
-            ctx.fillText(r.type, r.x + 10, r.y + 25);
-        });
-
-        gebouwen.forEach(b => {
-            if (b.type === 'miner') {
-                ctx.fillStyle = '#e67e22';
-                ctx.fillRect(b.x, b.y, b.size, b.size);
-                ctx.fillStyle = 'white';
-                ctx.font = "12px Arial";
-                ctx.fillText("Min", b.x + 4, b.y + 18);
-            } else if (b.type === 'mixer') {
-                ctx.fillStyle = '#e74c3c';
-                ctx.fillRect(b.x, b.y, b.size, b.size);
-                ctx.fillStyle = 'white';
-                ctx.font = "14px Arial";
-                ctx.fillText("MIX", b.x + 12, b.y + 30);
-            }
-        });
-
-        ctx.fillStyle = '#1abc9c';
-        ctx.beginPath();
-        ctx.arc(speler.x, speler.y, speler.grootte, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'white';
-        ctx.stroke();
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    updateUI();
-    gameLoop();
-</script>
-
+    <!-- INLADEN VAN DE JAVASCRIPT BESTANDEN -->
+    <script src="config.js"></script>
+    <script src="game-logic.js"></script>
+    <script src="ui-controller.js"></script>
 </body>
 </html>
