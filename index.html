@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>De Chem Fabriek</title>
+    <title>Chem Fabriek - Factorio Editie</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,159 +11,316 @@
             display: flex;
             justify-content: center;
             padding: 20px;
-        }
-        /* Het speelveld is hier extra hoog gemaakt (800px) */
-        .game-container {
-            background-color: #34495e;
-            width: 600px;
-            height: 800px; 
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
             gap: 20px;
         }
-        h1, h2 {
-            text-align: center;
-            margin: 0;
-            color: #1abc9c;
+        .game-wrapper {
+            position: relative;
         }
-        .sectie {
-            background-color: #2c3e50;
-            padding: 15px;
-            border-radius: 8px;
+        canvas {
+            background-color: #34495e;
+            border: 3px solid #1abc9c;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        .ui-panel {
+            background-color: #34495e;
+            width: 300px;
+            padding: 20px;
+            border-radius: 10px;
             border: 2px solid #1abc9c;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #1abc9c;
+            font-size: 1.2em;
         }
         button {
             background-color: #1abc9c;
             color: white;
             border: none;
-            padding: 8px 12px;
-            margin: 5px;
+            padding: 10px;
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
+            width: 100%;
+            margin-bottom: 5px;
         }
-        button:hover {
-            background-color: #16a085;
+        button:hover { background-color: #16a085; }
+        .actief { background-color: #e67e22 !important; }
+        
+        /* Popup voor de Mixer */
+        #mixerPopup {
+            display: none;
+            position: absolute;
+            top: 300px;
+            left: 100px;
+            width: 400px;
+            background-color: #2c3e50;
+            border: 3px solid #f1c40f;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            z-index: 10;
+            text-align: center;
         }
-        input {
-            padding: 8px;
+        #mixerPopup input {
+            padding: 10px;
             width: 80%;
             margin-bottom: 10px;
-            border-radius: 4px;
+            border-radius: 5px;
             border: none;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
 
-<div class="game-container">
-    <h1>De Chem Fabriek</h1>
+<div class="game-wrapper">
+    <canvas id="gameCanvas" width="600" height="800"></canvas>
     
-    <div class="sectie">
-        <h2>Inventaris</h2>
-        <p><strong>Geld:</strong> €<span id="geld">100</span></p>
-        <p><strong>Grondstoffen:</strong> Waterstof (H): <span id="H">0</span> | Zuurstof (O): <span id="O">0</span> | Natrium (Na): <span id="Na">0</span> | Chloor (Cl): <span id="Cl">0</span></p>
-        <p><strong>Producten:</strong> Water (H2O): <span id="H2O">0</span> | Keukenzout (NaCl): <span id="NaCl">0</span></p>
-    </div>
-
-    <div class="sectie">
-        <h2>Winkel (Koop Grondstoffen)</h2>
-        <button onclick="koop('H', 10)">Koop H (€10)</button>
-        <button onclick="koop('O', 15)">Koop O (€15)</button>
-        <button onclick="koop('Na', 20)">Koop Na (€20)</button>
-        <button onclick="koop('Cl', 20)">Koop Cl (€20)</button>
-    </div>
-
-    <div class="sectie">
+    <!-- De Chemische Mixer Interface -->
+    <div id="mixerPopup">
         <h2>Chemische Mixer</h2>
-        <p>Typ de juiste scheikundige vergelijking om producten te maken.<br>
-        <em>Hints: "2H + O -> H2O" of "Na + Cl -> NaCl"</em></p>
-        <input type="text" id="reactieInput" placeholder="Bijv: 2H + O -> H2O">
+        <p>Voer een kloppende reactievergelijking in!<br>
+        <em>Voorbeeld: 2H + O -> H2O</em></p>
+        <input type="text" id="reactieInput" placeholder="Typ hier je vergelijking...">
         <br>
-        <button onclick="mix()">Voer Reactie Uit!</button>
-        <p id="mixBericht" style="color: #f1c40f;"></p>
-    </div>
-
-    <div class="sectie">
-        <h2>Markt (Verkoop Producten)</h2>
-        <button onclick="verkoop('H2O', 50)">Verkoop Water (€50)</button>
-        <button onclick="verkoop('NaCl', 80)">Verkoop Keukenzout (€80)</button>
+        <button onclick="probeerMix()">Mixen!</button>
+        <button onclick="sluitMixer()" style="background-color: #e74c3c;">Sluiten</button>
+        <p id="mixBericht" style="color: #f1c40f; font-weight: bold;"></p>
     </div>
 </div>
 
+<div class="ui-panel">
+    <h2>Inventaris</h2>
+    <p><strong>Geld:</strong> €<span id="geld">100</span></p>
+    <p><strong>Grondstoffen:</strong><br>
+       H: <span id="inv_H">0</span> | O: <span id="inv_O">0</span><br>
+       Na: <span id="inv_Na">0</span> | Cl: <span id="inv_Cl">0</span></p>
+    <p><strong>Producten:</strong><br>
+       H2O (Water): <span id="inv_H2O">0</span><br>
+       NaCl (Zout): <span id="inv_NaCl">0</span></p>
+    
+    <hr>
+    <h2>Bouwen</h2>
+    <p style="font-size:0.9em; margin-bottom: 5px;">Klik op een knop en klik daarna op het veld.</p>
+    <button id="btnMiner" onclick="zetBouwModus('miner')">Bouw Miner (€50)</button>
+    <button id="btnMixer" onclick="zetBouwModus('mixer')">Bouw Mixer (€100)</button>
+
+    <hr>
+    <h2>Markt</h2>
+    <button onclick="verkoop('H2O', 50)">Verkoop Water (€50)</button>
+    <button onclick="verkoop('NaCl', 80)">Verkoop Keukenzout (€80)</button>
+
+    <hr>
+    <h2>Besturing</h2>
+    <ul style="font-size: 0.9em; padding-left: 20px;">
+        <li>WASD of Pijltjes om te lopen</li>
+        <li>Spatie = Open mixer (als je erbij staat)</li>
+    </ul>
+</div>
+
 <script>
-    // Spel variabelen
-    let geld = 100;
-    let inv = { H: 0, O: 0, Na: 0, Cl: 0, H2O: 0, NaCl: 0 };
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-    // Update het scherm
+    // Spel Data
+    let inv = { geld: 100, H: 0, O: 0, Na: 0, Cl: 0, H2O: 0, NaCl: 0 };
+    let speler = { x: 300, y: 400, grootte: 20, snelheid: 4 };
+    let toetsen = {};
+    let gebouwen = []; // Array voor miners en mixers
+    let bouwModus = null;
+
+    // Grondstof bronnen op de map
+    let bronnen = [
+        { type: 'H', x: 50, y: 50, w: 100, h: 100, kleur: '#3498db' }, // Blauw
+        { type: 'O', x: 400, y: 100, w: 100, h: 100, kleur: '#9b59b6' }, // Paars
+        { type: 'Na', x: 100, y: 550, w: 100, h: 100, kleur: '#f1c40f' }, // Geel
+        { type: 'Cl', x: 400, y: 600, w: 100, h: 100, kleur: '#2ecc71' }  // Groen
+    ];
+
+    // UI updaten
     function updateUI() {
-        document.getElementById('geld').innerText = geld;
-        document.getElementById('H').innerText = inv.H;
-        document.getElementById('O').innerText = inv.O;
-        document.getElementById('Na').innerText = inv.Na;
-        document.getElementById('Cl').innerText = inv.Cl;
-        document.getElementById('H2O').innerText = inv.H2O;
-        document.getElementById('NaCl').innerText = inv.NaCl;
+        document.getElementById('geld').innerText = inv.geld;
+        document.getElementById('inv_H').innerText = inv.H;
+        document.getElementById('inv_O').innerText = inv.O;
+        document.getElementById('inv_Na').innerText = inv.Na;
+        document.getElementById('inv_Cl').innerText = inv.Cl;
+        document.getElementById('inv_H2O').innerText = inv.H2O;
+        document.getElementById('inv_NaCl').innerText = inv.NaCl;
     }
 
-    // Grondstoffen kopen
-    function koop(element, prijs) {
-        if (geld >= prijs) {
-            geld -= prijs;
-            inv[element]++;
-            updateUI();
-        } else {
-            alert("Niet genoeg geld!");
-        }
-    }
-
-    // Producten verkopen
+    // Verkopen
     function verkoop(product, prijs) {
         if (inv[product] > 0) {
             inv[product]--;
-            geld += prijs;
+            inv.geld += prijs;
             updateUI();
-        } else {
-            alert("Je hebt dit product niet!");
         }
     }
 
-    // Zelf een vergelijking maken
-    function mix() {
-        let input = document.getElementById('reactieInput').value;
-        // Verwijder alle spaties om makkelijker te controleren
-        let schoneInput = input.replace(/\s/g, '');
+    // Bouw modus instellen
+    function zetBouwModus(type) {
+        bouwModus = type;
+        document.getElementById('btnMiner').classList.remove('actief');
+        document.getElementById('btnMixer').classList.remove('actief');
+        if(type) {
+            document.getElementById(type === 'miner' ? 'btnMiner' : 'btnMixer').classList.add('actief');
+        }
+    }
+
+    // Muisklik op canvas om te bouwen
+    canvas.addEventListener('mousedown', (e) => {
+        if (!bouwModus) return;
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (bouwModus === 'miner' && inv.geld >= 50) {
+            inv.geld -= 50;
+            gebouwen.push({ type: 'miner', x: x - 15, y: y - 15, size: 30 });
+        } else if (bouwModus === 'mixer' && inv.geld >= 100) {
+            inv.geld -= 100;
+            gebouwen.push({ type: 'mixer', x: x - 25, y: y - 25, size: 50 });
+        } else if (inv.geld < 50) {
+            alert("Niet genoeg geld!");
+        }
+        zetBouwModus(null); // Reset bouwmodus na bouwen
+        updateUI();
+    });
+
+    // Toetsenbord input
+    window.addEventListener('keydown', e => toetsen[e.code] = true);
+    window.addEventListener('keyup', e => toetsen[e.code] = false);
+
+    // Speler interactie met mixer
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            // Zoek of speler dichtbij een mixer staat
+            let dichtbij = gebouwen.find(b => b.type === 'mixer' && 
+                Math.hypot((b.x + b.size/2) - speler.x, (b.y + b.size/2) - speler.y) < 60);
+            
+            if (dichtbij) {
+                document.getElementById('mixerPopup').style.display = 'block';
+                document.getElementById('mixBericht').innerText = ""; // reset bericht
+            }
+        }
+    });
+
+    function sluitMixer() {
+        document.getElementById('mixerPopup').style.display = 'none';
+    }
+
+    // Het handmatig mixen van de vergelijking
+    function probeerMix() {
+        let input = document.getElementById('reactieInput').value.replace(/\s/g, '');
         let bericht = document.getElementById('mixBericht');
 
-        if (schoneInput === '2H+O->H2O') {
+        if (input === '2H+O->H2O') {
             if (inv.H >= 2 && inv.O >= 1) {
-                inv.H -= 2;
-                inv.O -= 1;
-                inv.H2O += 1;
-                bericht.innerText = "Succes! Je hebt Water (H2O) gemaakt.";
+                inv.H -= 2; inv.O -= 1; inv.H2O += 1;
+                bericht.innerText = "Succes! Water geproduceerd.";
+                bericht.style.color = "#2ecc71";
             } else {
-                bericht.innerText = "Mislukt: Je hebt niet genoeg H (2 nodig) of O (1 nodig).";
+                bericht.innerText = "Te weinig H of O!";
+                bericht.style.color = "#e74c3c";
             }
         } 
-        else if (schoneInput === 'Na+Cl->NaCl') {
+        else if (input === 'Na+Cl->NaCl') {
             if (inv.Na >= 1 && inv.Cl >= 1) {
-                inv.Na -= 1;
-                inv.Cl -= 1;
-                inv.NaCl += 1;
-                bericht.innerText = "Succes! Je hebt Keukenzout (NaCl) gemaakt.";
+                inv.Na -= 1; inv.Cl -= 1; inv.NaCl += 1;
+                bericht.innerText = "Succes! Zout geproduceerd.";
+                bericht.style.color = "#2ecc71";
             } else {
-                bericht.innerText = "Mislukt: Je hebt niet genoeg Na of Cl (van beide 1 nodig).";
+                bericht.innerText = "Te weinig Na of Cl!";
+                bericht.style.color = "#e74c3c";
             }
         } 
         else {
-            bericht.innerText = "Ongeldige reactie! Controleer je formule en de pijl (->).";
+            bericht.innerText = "Ongeldige reactie!";
+            bericht.style.color = "#e74c3c";
         }
         updateUI();
     }
+
+    // Automatisering: Miners delven grondstoffen (elke seconde)
+    setInterval(() => {
+        gebouwen.forEach(b => {
+            if (b.type === 'miner') {
+                // Kijk op welke bron de miner staat
+                let bron = bronnen.find(r => 
+                    b.x + b.size/2 > r.x && b.x + b.size/2 < r.x + r.w &&
+                    b.y + b.size/2 > r.y && b.y + b.size/2 < r.y + r.h
+                );
+                if (bron) {
+                    inv[bron.type]++;
+                }
+            }
+        });
+        updateUI();
+    }, 1000);
+
+    // Game loop (Updaten en Tekenen)
+    function gameLoop() {
+        // Speler bewegen
+        if ((toetsen['KeyW'] || toetsen['ArrowUp']) && speler.y > 0) speler.y -= speler.snelheid;
+        if ((toetsen['KeyS'] || toetsen['ArrowDown']) && speler.y < canvas.height) speler.y += speler.snelheid;
+        if ((toetsen['KeyA'] || toetsen['ArrowLeft']) && speler.x > 0) speler.x -= speler.snelheid;
+        if ((toetsen['KeyD'] || toetsen['ArrowRight']) && speler.x < canvas.width) speler.x += speler.snelheid;
+
+        // Teken achtergrond
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Teken Factorio raster (grid)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
+        for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
+
+        // Teken bronnen
+        bronnen.forEach(r => {
+            ctx.fillStyle = r.kleur;
+            ctx.globalAlpha = 0.5;
+            ctx.fillRect(r.x, r.y, r.w, r.h);
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = "white";
+            ctx.font = "20px Arial";
+            ctx.fillText(r.type, r.x + 10, r.y + 25);
+        });
+
+        // Teken gebouwen
+        gebouwen.forEach(b => {
+            if (b.type === 'miner') {
+                ctx.fillStyle = '#e67e22'; // Oranje voor miner
+                ctx.fillRect(b.x, b.y, b.size, b.size);
+                ctx.fillStyle = 'white';
+                ctx.font = "12px Arial";
+                ctx.fillText("Min", b.x + 4, b.y + 18);
+            } else if (b.type === 'mixer') {
+                ctx.fillStyle = '#e74c3c'; // Rood voor mixer
+                ctx.fillRect(b.x, b.y, b.size, b.size);
+                ctx.fillStyle = 'white';
+                ctx.font = "14px Arial";
+                ctx.fillText("MIX", b.x + 12, b.y + 30);
+            }
+        });
+
+        // Teken speler
+        ctx.fillStyle = '#1abc9c';
+        ctx.beginPath();
+        ctx.arc(speler.x, speler.y, speler.grootte, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Start het spel
+    updateUI();
+    gameLoop();
 </script>
 
 </body>
