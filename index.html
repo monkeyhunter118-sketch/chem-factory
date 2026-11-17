@@ -2,660 +2,103 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Chem Fabriek - Factorio Editie</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #2c3e50;
-            color: white;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-            gap: 20px;
-        }
-        canvas {
-            background-color: #34495e;
-            border: 3px solid #1abc9c;
-            border-radius: 5px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.5);
-        }
-        .ui-panel {
-            background-color: #34495e;
-            width: 300px;
-            padding: 20px;
-            border-radius: 10px;
-            border: 2px solid #1abc9c;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-height: 800px;
-            overflow-y: auto;
-        }
-        h2 {
-            margin-top: 0;
-            color: #1abc9c;
-            font-size: 1.2em;
-            border-bottom: 1px solid #1abc9c;
-            padding-bottom: 5px;
-        }
-        button {
-            background-color: #1abc9c;
-            color: white;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            width: 100%;
-            margin-bottom: 5px;
-            transition: background-color 0.2s;
-        }
-        button:hover { background-color: #16a085; }
-        .actief { background-color: #e67e22 !important; }
-        
-        /* Tutorial box in dezelfde stijl */
-        #tutorialBox {
-            background-color: #2c3e50;
-            padding: 14px;
-            border-radius: 8px;
-            border: 2px solid #1abc9c;
-        }
-        .tutorial-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #1abc9c;
-            padding-bottom: 5px;
-            margin-bottom: 8px;
-        }
-        .tutorial-header h2 {
-            margin: 0;
-            border: none;
-            padding: 0;
-            font-size: 1.05em;
-        }
-        .btn-klein {
-            width: auto;
-            padding: 4px 8px;
-            font-size: 0.75em;
-            margin: 0;
-            background-color: #7f8c8d;
-        }
-        .btn-klein:hover {
-            background-color: #95a5a6;
-        }
-        #tutorialTekst {
-            font-size: 0.9em;
-            line-height: 1.4;
-            margin: 0;
-        }
-        .tutorial-progress {
-            height: 6px;
-            background-color: #34495e;
-            border-radius: 3px;
-            margin-top: 10px;
-            overflow: hidden;
-        }
-        #tutorialBalk {
-            height: 100%;
-            width: 0%;
-            background-color: #1abc9c;
-            transition: width 0.3s;
-        }
-
-        /* Het mixer paneel in de zijbalk */
-        #mixerPaneel {
-            display: none;
-            background-color: #2c3e50;
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px dashed #f1c40f;
-            margin-top: 10px;
-        }
-        #mixerPaneel input {
-            padding: 8px;
-            width: 90%;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border: none;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mega Chemie Fabriek - Land Expansion & Stable Market</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div id="game-container">
+        <!-- Grid Canvas -->
+        <div id="grid-container"></div>
 
-<canvas id="gameCanvas" width="600" height="800"></canvas>
+        <!-- Sidebar Dashboard -->
+        <div id="ui-panel" class="p-4 flex flex-col h-full">
+            <div class="border-b border-gray-700 pb-3 mb-3">
+                <div class="flex justify-between items-center mb-1">
+                    <h1 class="text-xl font-black text-amber-400 tracking-wide">🏭 CHEM FABRIEK</h1>
+                    <span id="level-badge" class="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded border border-amber-500/40 font-bold">Lvl 1</span>
+                </div>
+                <p id="level-title" class="text-xs text-gray-400">Basis Chemie (H₂O)</p>
+            </div>
 
-<div class="ui-panel">
-    <!-- Interactieve Tutorial -->
-    <div id="tutorialBox">
-        <div class="tutorial-header">
-            <h2 id="tutorialTitel">Tutorial (1/6)</h2>
-            <button class="btn-klein" onclick="sluitTutorial()">Overslaan</button>
-        </div>
-        <p id="tutorialTekst">Gebruik <b>WASD</b> of de <b>pijltjestoetsen</b> om rond te lopen in je fabriek.</p>
-        <div class="tutorial-progress">
-            <div id="tutorialBalk"></div>
+            <!-- Stats, Level Upgrade & Sell Factory -->
+            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-800 mb-3 space-y-2">
+                <div>
+                    <div class="text-xs text-gray-400 uppercase font-semibold">Saldo</div>
+                    <div class="text-2xl font-black text-green-400" id="money-display">€ 1.000</div>
+                </div>
+                
+                <button id="btn-upgrade-level" onclick="upgradeLevel()" class="w-full py-2 px-3 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs rounded transition flex justify-between items-center shadow-lg">
+                    <span>🚀 Herbouw Fabriek (Lvl <span id="next-level-num">2</span>)</span>
+                    <span id="next-level-cost">€ 1.500</span>
+                </button>
+
+                <button id="btn-sell-factory" onclick="sellEntireFactory()" class="w-full py-1.5 px-3 bg-red-900/50 hover:bg-red-800/70 border border-red-700/60 text-red-200 font-bold text-xs rounded transition flex justify-between items-center">
+                    <span>🧹 Verkoop Fabriek (Grid Ontruimen)</span>
+                    <span class="text-[10px] bg-red-950 px-1.5 py-0.5 rounded text-red-300">100% Refund</span>
+                </button>
+            </div>
+
+            <!-- TABBLAD NAVIGATIE -->
+            <div class="flex border-b border-gray-700 mb-3 bg-gray-900/50 rounded-t p-1 gap-1">
+                <button id="tab-btn-build" onclick="switchTab('build')" class="tab-btn active flex-1 py-1.5 text-xs font-bold rounded text-amber-400 bg-gray-800 border border-gray-700 transition">
+                    🔨 Gebouwen & Bronnen
+                </button>
+                <button id="tab-btn-recipes" onclick="switchTab('recipes')" class="tab-btn flex-1 py-1.5 text-xs font-bold rounded text-gray-400 hover:text-gray-200 transition">
+                    🧪 Markt & Recepten
+                </button>
+            </div>
+
+            <!-- TAB INHOUD -->
+            <div class="flex-grow overflow-y-auto space-y-4 pr-1">
+                <div id="tab-content-build" class="space-y-3">
+                    <div id="blueprint-status-card" class="bg-blue-950/40 border border-blue-800/60 p-2.5 rounded-lg text-xs hidden">
+                        <div class="flex justify-between items-center font-bold text-blue-300 mb-1">
+                            <span>📋 Blauwdruk Actief</span>
+                            <button onclick="resetBlueprint()" class="text-[10px] text-red-400 hover:underline">Wissen</button>
+                        </div>
+                        <p id="blueprint-status-text" class="text-[11px] text-gray-300">Gebouwen bewaard. Klik op het grid om te plaatsen.</p>
+                    </div>
+                    <div class="space-y-1.5" id="build-buttons"></div>
+                </div>
+
+                <div id="tab-content-recipes" class="space-y-2 hidden">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-gray-400">📈 Dynamische Markt</h2>
+                        <span class="text-[10px] text-amber-400 font-semibold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">Vraag & Aanbod</span>
+                    </div>
+                    <div class="space-y-1.5" id="recipe-list"></div>
+                </div>
+            </div>
+
+            <div class="mt-3 pt-3 border-t border-gray-800 text-[11px] text-gray-400 space-y-1">
+                <p>💡 <b>Sneltoetsen:</b> [R] Draaien | [X] Verwijderen 🗑️</p>
+                <p>🌍 <b>Grond:</b> Klik op slotjes (🔒) om land bij te kopen.</p>
+            </div>
         </div>
     </div>
 
-    <h2>Inventaris</h2>
-    <p><strong>Geld:</strong> €<span id="geld">250</span></p>
-    <p><strong>Grondstoffen:</strong><br>
-       H: <span id="inv_H">0</span> | O: <span id="inv_O">0</span><br>
-       Na: <span id="inv_Na">0</span> | Cl: <span id="inv_Cl">0</span></p>
-    <p><strong>Producten:</strong><br>
-       H2O (Water): <span id="inv_H2O">0</span><br>
-       NaCl (Zout): <span id="inv_NaCl">0</span></p>
-    
-    <!-- Dit paneel verschijnt alleen als je bij een mixer staat -->
-    <div id="mixerPaneel">
-        <h2 style="color: #f1c40f; border-color: #f1c40f;">Mixer</h2>
-        <p style="font-size: 0.9em;">Voer vergelijking in (bijv. 2H + O -> H2O):</p>
-        <input type="text" id="reactieInput" placeholder="Jouw formule...">
-        <button onclick="probeerMix()" style="background-color: #f1c40f; color: #2c3e50;">Mix Product</button>
-        <p id="mixBericht" style="font-size: 0.9em; font-weight: bold; margin-bottom: 0;"></p>
+    <!-- Modal voor Mixer Recept Selectie -->
+    <div id="mixer-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center hidden z-[1000]">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl p-5 w-96 max-h-[80vh] flex flex-col shadow-2xl">
+            <div class="flex justify-between items-center pb-3 border-b border-gray-800 mb-3">
+                <h3 class="font-bold text-lg text-amber-400 flex items-center gap-2">🧪 Mixer Recept Kiezen</h3>
+                <button onclick="closeMixerModal()" class="text-gray-400 hover:text-white text-xl font-bold px-2">&times;</button>
+            </div>
+            
+            <p class="text-xs text-gray-400 mb-3">Kies welke stof deze mixer moet produceren:</p>
+            <div id="modal-recipe-options" class="flex-grow overflow-y-auto space-y-2 pr-1"></div>
+
+            <button onclick="closeMixerModal()" class="mt-4 w-full py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded font-semibold text-xs transition">
+                Sluiten
+            </button>
+        </div>
     </div>
 
-    <h2>Bouwen</h2>
-    <p style="font-size:0.85em; margin-bottom: 5px;">Selecteer en klik op de map.</p>
-    <button id="btnMiner" onclick="zetBouwModus('miner')">Bouw Miner (€50)</button>
-    <button id="btnMixer" onclick="zetBouwModus('mixer')">Bouw Mixer (€100)</button>
-    <button id="btnDraai" onclick="draaiRichting()" style="background-color: #3498db;">Draai Uitgang: Rechts (→) [R]</button>
-
-    <h2>Markt</h2>
-    <button onclick="verkoop('H2O', 50)">Verkoop Water (€50)</button>
-    <button onclick="verkoop('NaCl', 80)">Verkoop Zout (€80)</button>
-
-    <h2>Besturing</h2>
-    <ul style="font-size: 0.85em; padding-left: 20px; margin-top: 0;">
-        <li>WASD of Pijltjes om te lopen</li>
-        <li>Loop naar een rode Mixer om te mixen</li>
-        <li>Druk op <b>R</b> of klik op een Mixer om de uitgang (pijltje) te draaien</li>
-        <li>Loop over gemaakte producten bij het pijltje om ze op te pakken</li>
-    </ul>
-    <button id="btnHerstartTutorial" onclick="herstartTutorial()" style="display: none; background-color: #3498db;">Tutorial opnieuw starten</button>
-</div>
-
-<script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // Spel Data
-    let inv = { geld: 250, H: 0, O: 0, Na: 0, Cl: 0, H2O: 0, NaCl: 0 };
-    let speler = { x: 300, y: 400, grootte: 20, snelheid: 4 };
-    let toetsen = {};
-    let gebouwen = [];
-    let uitgeworpenProducten = [];
-    let bouwModus = null;
-    let bouwRichting = 1; // 0 = Boven, 1 = Rechts, 2 = Onder, 3 = Links
-    let actieveMixer = null;
-    let muisPos = { x: -100, y: -100 };
-
-    // Tutorial Data
-    let tutorialActief = true;
-    let tutorialStap = 0;
-    let heeftVerkocht = false;
-
-    const TUTORIAL_STAPPEN = [
-        {
-            titel: "Tutorial (1/6): Bewegen",
-            tekst: "Gebruik <b>WASD</b> of de <b>pijltjestoetsen</b> om rond te lopen in je fabriek.",
-            check: () => Math.hypot(speler.x - 300, speler.y - 400) > 30
-        },
-        {
-            titel: "Tutorial (2/6): Grondstoffen delven",
-            tekst: "Klik op <b>Bouw Miner (€50)</b> en plaats er één op de blauwe <b>H-bron</b> en één op de paarse <b>O-bron</b>.",
-            check: () => {
-                const heeftH = gebouwen.some(b => b.type === 'miner' && b.x + b.size/2 > 50 && b.x + b.size/2 < 150 && b.y + b.size/2 > 50 && b.y + b.size/2 < 150);
-                const heeftO = gebouwen.some(b => b.type === 'miner' && b.x + b.size/2 > 400 && b.x + b.size/2 < 500 && b.y + b.size/2 > 100 && b.y + b.size/2 < 200);
-                return heeftH && heeftO;
-            }
-        },
-        {
-            titel: "Tutorial (3/6): Mixer bouwen",
-            tekst: "Klik op <b>Bouw Mixer (€100)</b> en plaats hem op een vrije plek. Gebruik <b>[R]</b> om het gele pijltje te draaien.",
-            check: () => gebouwen.some(b => b.type === 'mixer')
-        },
-        {
-            titel: "Tutorial (4/6): Reactie maken",
-            tekst: "Loop naar je rode <b>Mixer</b> tot het gele paneel opent. Wacht op <b>2 H</b> en <b>1 O</b> en typ: <b>2H + O -> H2O</b>",
-            check: () => uitgeworpenProducten.some(p => p.type === 'H2O') || inv.H2O > 0 || heeftVerkocht
-        },
-        {
-            titel: "Tutorial (5/6): Product oprapen",
-            tekst: "Loop naar het <b>gele pijltje</b> aan de zijkant van je Mixer om het bolletje <b>H2O</b> op te pakken.",
-            check: () => inv.H2O > 0 || heeftVerkocht
-        },
-        {
-            titel: "Tutorial (6/6): Verkopen",
-            tekst: "Klik onder <b>Markt</b> op <b>Verkoop Water (€50)</b> om je eerste winst te maken!",
-            check: () => heeftVerkocht
-        }
-    ];
-
-    const RICHTING_NAMEN = ['Boven (↑)', 'Rechts (→)', 'Onder (↓)', 'Links (←)'];
-
-    // Grondstof bronnen
-    let bronnen = [
-        { type: 'H', x: 50, y: 50, w: 100, h: 100, kleur: '#3498db' },
-        { type: 'O', x: 400, y: 100, w: 100, h: 100, kleur: '#9b59b6' },
-        { type: 'Na', x: 100, y: 550, w: 100, h: 100, kleur: '#f1c40f' },
-        { type: 'Cl', x: 400, y: 600, w: 100, h: 100, kleur: '#2ecc71' }
-    ];
-
-    function updateTutorial() {
-        if (!tutorialActief) return;
-
-        // Loop door stappen heen als de speler al verder is
-        while (tutorialStap < TUTORIAL_STAPPEN.length && TUTORIAL_STAPPEN[tutorialStap].check()) {
-            tutorialStap++;
-        }
-
-        const titelEl = document.getElementById('tutorialTitel');
-        const tekstEl = document.getElementById('tutorialTekst');
-        const balkEl = document.getElementById('tutorialBalk');
-
-        if (tutorialStap >= TUTORIAL_STAPPEN.length) {
-            titelEl.innerText = "Tutorial Voltooid! 🎉";
-            tekstEl.innerHTML = "Goed gedaan! Probeer nu ook <b>Keukenzout (NaCl)</b> te maken met de formule: <b>Na + Cl -> NaCl</b>.";
-            balkEl.style.width = "100%";
-        } else {
-            const huidige = TUTORIAL_STAPPEN[tutorialStap];
-            titelEl.innerText = huidige.titel;
-            tekstEl.innerHTML = huidige.tekst;
-            balkEl.style.width = `${(tutorialStap / TUTORIAL_STAPPEN.length) * 100}%`;
-        }
-    }
-
-    function sluitTutorial() {
-        tutorialActief = false;
-        document.getElementById('tutorialBox').style.display = 'none';
-        document.getElementById('btnHerstartTutorial').style.display = 'block';
-    }
-
-    function herstartTutorial() {
-        tutorialActief = true;
-        tutorialStap = 0;
-        heeftVerkocht = false;
-        document.getElementById('tutorialBox').style.display = 'block';
-        document.getElementById('btnHerstartTutorial').style.display = 'none';
-        updateTutorial();
-    }
-
-    function updateUI() {
-        document.getElementById('geld').innerText = inv.geld;
-        document.getElementById('inv_H').innerText = inv.H;
-        document.getElementById('inv_O').innerText = inv.O;
-        document.getElementById('inv_Na').innerText = inv.Na;
-        document.getElementById('inv_Cl').innerText = inv.Cl;
-        document.getElementById('inv_H2O').innerText = inv.H2O;
-        document.getElementById('inv_NaCl').innerText = inv.NaCl;
-        document.getElementById('btnDraai').innerText = `Draai Uitgang: ${RICHTING_NAMEN[bouwRichting]} [R]`;
-        updateTutorial();
-    }
-
-    function draaiRichting() {
-        bouwRichting = (bouwRichting + 1) % 4;
-        if (!bouwModus && actieveMixer) {
-            actieveMixer.dir = (actieveMixer.dir + 1) % 4;
-        }
-        updateUI();
-    }
-
-    function verkoop(product, prijs) {
-        if (inv[product] > 0) {
-            inv[product]--;
-            inv.geld += prijs;
-            if (product === 'H2O') heeftVerkocht = true;
-            updateUI();
-        }
-    }
-
-    function zetBouwModus(type) {
-        bouwModus = type;
-        document.getElementById('btnMiner').classList.remove('actief');
-        document.getElementById('btnMixer').classList.remove('actief');
-        if(type) {
-            document.getElementById(type === 'miner' ? 'btnMiner' : 'btnMixer').classList.add('actief');
-        }
-    }
-
-    canvas.addEventListener('mousemove', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        muisPos.x = e.clientX - rect.left;
-        muisPos.y = e.clientY - rect.top;
-    });
-
-    canvas.addEventListener('mousedown', (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        if (!bouwModus) {
-            let geklikteMixer = gebouwen.find(b => b.type === 'mixer' &&
-                x >= b.x && x <= b.x + b.size && y >= b.y && y <= b.y + b.size);
-            if (geklikteMixer) {
-                geklikteMixer.dir = (geklikteMixer.dir + 1) % 4;
-            }
-            return;
-        }
-
-        if (bouwModus === 'miner' && inv.geld >= 50) {
-            inv.geld -= 50;
-            gebouwen.push({ type: 'miner', x: x - 15, y: y - 15, size: 30 });
-        } else if (bouwModus === 'mixer' && inv.geld >= 100) {
-            inv.geld -= 100;
-            gebouwen.push({ type: 'mixer', x: x - 25, y: y - 25, size: 50, dir: bouwRichting });
-        } else {
-            alert("Niet genoeg geld!");
-        }
-        zetBouwModus(null);
-        updateUI();
-    });
-
-    window.addEventListener('keydown', e => {
-        toetsen[e.code] = true;
-        if (e.code === 'KeyR' && document.activeElement.id !== 'reactieInput') {
-            draaiRichting();
-        }
-    });
-    window.addEventListener('keyup', e => toetsen[e.code] = false);
-
-    function berekenUitgangPositie(mixer) {
-        const cx = mixer.x + mixer.size / 2;
-        const cy = mixer.y + mixer.size / 2;
-        const afstand = mixer.size / 2 + 18;
-
-        if (mixer.dir === 0) return { x: cx, y: cy - afstand }; // Boven
-        if (mixer.dir === 1) return { x: cx + afstand, y: cy }; // Rechts
-        if (mixer.dir === 2) return { x: cx, y: cy + afstand }; // Onder
-        return { x: cx - afstand, y: cy };                      // Links
-    }
-
-    function probeerMix() {
-        if (!actieveMixer) return;
-
-        let input = document.getElementById('reactieInput').value.replace(/\s/g, '');
-        let bericht = document.getElementById('mixBericht');
-
-        const uitgang = berekenUitgangPositie(actieveMixer);
-        const buitenVeld = uitgang.x < 12 || uitgang.x > canvas.width - 12 || uitgang.y < 12 || uitgang.y > canvas.height - 12;
-        const tegenGebouw = gebouwen.some(b =>
-            uitgang.x > b.x - 8 && uitgang.x < b.x + b.size + 8 &&
-            uitgang.y > b.y - 8 && uitgang.y < b.y + b.size + 8
-        );
-
-        if (buitenVeld || tegenGebouw) {
-            bericht.innerText = "Uitgang (pijltje) is geblokkeerd! Draai de mixer met [R].";
-            bericht.style.color = "#e74c3c";
-            return;
-        }
-
-        if (input === '2H+O->H2O') {
-            if (inv.H >= 2 && inv.O >= 1) {
-                inv.H -= 2; inv.O -= 1;
-                uitgeworpenProducten.push({ type: 'H2O', x: uitgang.x, y: uitgang.y });
-                bericht.innerText = "Succes: H2O ligt bij de uitgang (pijltje)!";
-                bericht.style.color = "#2ecc71";
-            } else {
-                bericht.innerText = "Te weinig H of O!";
-                bericht.style.color = "#e74c3c";
-            }
-        } 
-        else if (input === 'Na+Cl->NaCl') {
-            if (inv.Na >= 1 && inv.Cl >= 1) {
-                inv.Na -= 1; inv.Cl -= 1;
-                uitgeworpenProducten.push({ type: 'NaCl', x: uitgang.x, y: uitgang.y });
-                bericht.innerText = "Succes: NaCl ligt bij de uitgang (pijltje)!";
-                bericht.style.color = "#2ecc71";
-            } else {
-                bericht.innerText = "Te weinig Na of Cl!";
-                bericht.style.color = "#e74c3c";
-            }
-        } 
-        else {
-            bericht.innerText = "Ongeldige reactie!";
-            bericht.style.color = "#e74c3c";
-        }
-        updateUI();
-    }
-
-    function tekenMixer(x, y, size, dir, isPreview = false) {
-        ctx.save();
-        if (isPreview) ctx.globalAlpha = 0.65;
-
-        ctx.fillStyle = '#e74c3c';
-        ctx.fillRect(x, y, size, size);
-
-        ctx.strokeStyle = '#7f1d1d';
-        ctx.lineWidth = 3;
-        ctx.strokeRect(x, y, size, size);
-
-        ctx.fillStyle = 'white';
-        ctx.font = "bold 13px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("MIX", x + size / 2, y + size / 2);
-
-        ctx.strokeStyle = '#f1c40f';
-        ctx.fillStyle = '#f1c40f';
-        ctx.lineWidth = 4;
-
-        const cx = x + size / 2;
-        const cy = y + size / 2;
-
-        ctx.beginPath();
-        if (dir === 0) {
-            ctx.moveTo(x + 4, y);
-            ctx.lineTo(x + size - 4, y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(cx, y - 12);
-            ctx.lineTo(cx - 8, y - 2);
-            ctx.lineTo(cx + 8, y - 2);
-            ctx.closePath();
-            ctx.fill();
-        } else if (dir === 1) {
-            ctx.moveTo(x + size, y + 4);
-            ctx.lineTo(x + size, y + size - 4);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x + size + 12, cy);
-            ctx.lineTo(x + size + 2, cy - 8);
-            ctx.lineTo(x + size + 2, cy + 8);
-            ctx.closePath();
-            ctx.fill();
-        } else if (dir === 2) {
-            ctx.moveTo(x + 4, y + size);
-            ctx.lineTo(x + size - 4, y + size);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(cx, y + size + 12);
-            ctx.lineTo(cx - 8, y + size + 2);
-            ctx.lineTo(cx + 8, y + size + 2);
-            ctx.closePath();
-            ctx.fill();
-        } else if (dir === 3) {
-            ctx.moveTo(x, y + 4);
-            ctx.lineTo(x, y + size - 4);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(x - 12, cy);
-            ctx.lineTo(x - 2, cy - 8);
-            ctx.lineTo(x - 2, cy + 8);
-            ctx.closePath();
-            ctx.fill();
-        }
-
-        ctx.restore();
-    }
-
-    function tekenTutorialHints() {
-        if (!tutorialActief || tutorialStap >= TUTORIAL_STAPPEN.length) return;
-
-        const puls = Math.sin(Date.now() / 200) * 3;
-        ctx.save();
-        ctx.strokeStyle = '#f1c40f';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([6, 4]);
-
-        // Stap 2: Markeer H en O bronnen als daar nog geen miner staat
-        if (tutorialStap === 1) {
-            ['H', 'O'].forEach(type => {
-                const bron = bronnen.find(r => r.type === type);
-                const heeftMiner = gebouwen.some(b => b.type === 'miner' &&
-                    b.x + b.size/2 > bron.x && b.x + b.size/2 < bron.x + bron.w &&
-                    b.y + b.size/2 > bron.y && b.y + b.size/2 < bron.y + bron.h);
-                if (!heeftMiner) {
-                    ctx.strokeRect(bron.x - puls, bron.y - puls, bron.w + puls * 2, bron.h + puls * 2);
-                }
-            });
-        }
-
-        // Stap 4: Markeer de mixer zodat je weet waar je naartoe moet lopen
-        if (tutorialStap === 3) {
-            const mixer = gebouwen.find(b => b.type === 'mixer');
-            if (mixer) {
-                ctx.beginPath();
-                ctx.arc(mixer.x + mixer.size/2, mixer.y + mixer.size/2, 42 + puls, 0, Math.PI * 2);
-                ctx.stroke();
-            }
-        }
-
-        // Stap 5: Markeer het uitgeworpen H2O product
-        if (tutorialStap === 4) {
-            uitgeworpenProducten.forEach(prod => {
-                ctx.beginPath();
-                ctx.arc(prod.x, prod.y, 18 + puls, 0, Math.PI * 2);
-                ctx.stroke();
-            });
-        }
-
-        ctx.restore();
-    }
-
-    setInterval(() => {
-        gebouwen.forEach(b => {
-            if (b.type === 'miner') {
-                let bron = bronnen.find(r => 
-                    b.x + b.size/2 > r.x && b.x + b.size/2 < r.x + r.w &&
-                    b.y + b.size/2 > r.y && b.y + b.size/2 < r.y + r.h
-                );
-                if (bron) inv[bron.type]++;
-            }
-        });
-        updateUI();
-    }, 1000);
-
-    function gameLoop() {
-        let bewogen = false;
-        if ((toetsen['KeyW'] || toetsen['ArrowUp']) && speler.y > 0) { speler.y -= speler.snelheid; bewogen = true; }
-        if ((toetsen['KeyS'] || toetsen['ArrowDown']) && speler.y < canvas.height) { speler.y += speler.snelheid; bewogen = true; }
-        if ((toetsen['KeyA'] || toetsen['ArrowLeft']) && speler.x > 0) { speler.x -= speler.snelheid; bewogen = true; }
-        if ((toetsen['KeyD'] || toetsen['ArrowRight']) && speler.x < canvas.width) { speler.x += speler.snelheid; bewogen = true; }
-
-        if (bewogen && tutorialActief && tutorialStap === 0) {
-            updateTutorial();
-        }
-
-        // Controleer of speler bij een mixer staat om het menu te tonen
-        actieveMixer = gebouwen.find(b => b.type === 'mixer' && 
-            Math.hypot((b.x + b.size/2) - speler.x, (b.y + b.size/2) - speler.y) < 60);
-        
-        document.getElementById('mixerPaneel').style.display = actieveMixer ? 'block' : 'none';
-
-        // Producten oprapen die uit een mixer zijn gekomen
-        for (let i = uitgeworpenProducten.length - 1; i >= 0; i--) {
-            const prod = uitgeworpenProducten[i];
-            if (Math.hypot(prod.x - speler.x, prod.y - speler.y) < speler.grootte + 12) {
-                inv[prod.type]++;
-                uitgeworpenProducten.splice(i, 1);
-                updateUI();
-            }
-        }
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Raster
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
-        for(let i=0; i<canvas.width; i+=40) { ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke(); }
-        for(let i=0; i<canvas.height; i+=40) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke(); }
-
-        // Bronnen
-        ctx.textAlign = "left";
-        ctx.textBaseline = "alphabetic";
-        bronnen.forEach(r => {
-            ctx.fillStyle = r.kleur;
-            ctx.globalAlpha = 0.5;
-            ctx.fillRect(r.x, r.y, r.w, r.h);
-            ctx.globalAlpha = 1.0;
-            ctx.fillStyle = "white";
-            ctx.font = "20px Arial";
-            ctx.fillText(r.type, r.x + 10, r.y + 25);
-        });
-
-        // Gebouwen
-        gebouwen.forEach(b => {
-            if (b.type === 'miner') {
-                ctx.fillStyle = '#e67e22';
-                ctx.fillRect(b.x, b.y, b.size, b.size);
-                ctx.fillStyle = 'white';
-                ctx.font = "12px Arial";
-                ctx.textAlign = "left";
-                ctx.textBaseline = "alphabetic";
-                ctx.fillText("Min", b.x + 4, b.y + 18);
-            } else if (b.type === 'mixer') {
-                tekenMixer(b.x, b.y, b.size, b.dir);
-            }
-        });
-
-        // Bouwvoorbeeld onder de muis tonen
-        if (bouwModus === 'mixer') {
-            tekenMixer(muisPos.x - 25, muisPos.y - 25, 50, bouwRichting, true);
-        } else if (bouwModus === 'miner') {
-            ctx.save();
-            ctx.globalAlpha = 0.65;
-            ctx.fillStyle = '#e67e22';
-            ctx.fillRect(muisPos.x - 15, muisPos.y - 15, 30, 30);
-            ctx.restore();
-        }
-
-        // Uitgeworpen producten bij de uitgang van de mixers tekenen
-        uitgeworpenProducten.forEach(prod => {
-            ctx.beginPath();
-            ctx.arc(prod.x, prod.y, 11, 0, Math.PI * 2);
-            ctx.fillStyle = prod.type === 'H2O' ? '#3498db' : '#ecf0f1';
-            ctx.fill();
-            ctx.strokeStyle = '#f1c40f';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.fillStyle = prod.type === 'H2O' ? 'white' : '#2c3e50';
-            ctx.font = "bold 8px Arial";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(prod.type, prod.x, prod.y);
-        });
-
-        // Subtiele tutorial-cirkels/kadertjes
-        tekenTutorialHints();
-
-        // Speler
-        ctx.fillStyle = '#1abc9c';
-        ctx.beginPath();
-        ctx.arc(speler.x, speler.y, speler.grootte, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'white';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        requestAnimationFrame(gameLoop);
-    }
-
-    updateUI();
-    gameLoop();
-</script>
-
+    <!-- INLADEN VAN DE JAVASCRIPT BESTANDEN -->
+    <script src="config.js"></script>
+    <script src="game-logic.js"></script>
+    <script src="ui-controller.js"></script>
 </body>
 </html>
